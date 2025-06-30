@@ -1,22 +1,4 @@
-def show_note_dialog(self):
-        """Muestra el diálogo para agregar una nota con manejo de errores"""
-        try:
-            dialog = NoteDialog(self)
-            if dialog.exec() == QDialog.DialogCode.Accepted:
-                note_text = dialog.get_note_text()
-                if not note_text:
-                    QMessageBox.warning(self, "Advertencia", "Por favor ingrese una nota")
-                    return
-                    
-                if self.save_note_to_db(self.client_id, note_text):
-                    # Recargar notas
-                    self.load_client_notes()
-                    QMessageBox.information(self, "Éxito", "Nota guardada correctamente")
-                else:
-                    QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
-        except Exception as e:
-            logging.error(f"Error en diálogo de nota: {e}")
-            QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")# cliente_detalle.py
+# cliente_detalle.py
 import sys
 import logging
 import webbrowser
@@ -49,8 +31,17 @@ class ClienteDetalleWindow(QWidget):
         self.COLOR_ROJO_HOVER = "#C41230"
         self.COLOR_GRIS_HOVER = "#E8E8E8"
         
+        # PRIMERO crear la UI
         self.initUI()
+        
+        # DESPUÉS cargar las notas (cuando ya existe notes_layout)
         self.load_client_notes()
+        
+        # Debug: verificar que notes_layout existe después de crear la UI
+        logging.info(f"Al final de __init__, notes_layout existe: {hasattr(self, 'notes_layout')}")
+        if hasattr(self, 'notes_layout'):
+            logging.info(f"notes_layout es None: {self.notes_layout is None}")
+            logging.info(f"notes_layout count: {self.notes_layout.count()}")
         
     def initUI(self):
         """Inicializa la interfaz de usuario"""
@@ -238,10 +229,14 @@ class ClienteDetalleWindow(QWidget):
         scroll_area.setMinimumHeight(300)
         scroll_area.setMaximumHeight(400)
         
-        # Widget contenedor para las notas
+        # Widget contenedor para las notas - ESTE ES EL IMPORTANTE
         self.notes_widget = QWidget()
-        self.notes_layout = QVBoxLayout()
+        self.notes_layout = QVBoxLayout()  # AQUÍ SE CREA notes_layout
         self.notes_widget.setLayout(self.notes_layout)
+        
+        # Verificar que se creó correctamente
+        logging.info(f"notes_layout creado: {self.notes_layout}")
+        logging.info(f"notes_widget creado: {self.notes_widget}")
         
         scroll_area.setWidget(self.notes_widget)
         timeline_layout.addWidget(scroll_area)
@@ -411,23 +406,21 @@ class ClienteDetalleWindow(QWidget):
         
         control_widget.setLayout(control_layout)
         parent.addWidget(control_widget)
-        
+    
     def load_client_notes(self):
-        """Carga las notas del cliente usando consulta directa a la base de datos"""
+        """Carga las notas del cliente - VERSIÓN ULTRA SIMPLE"""
         try:
-            logging.info(f"Cargando notas para cliente: {self.client_id}")
+            logging.info(f"=== CARGANDO NOTAS PARA CLIENTE: {self.client_id} ===")
             
-            # Hacer consulta directa a la base de datos
+            # Consulta directa a la base de datos
             conn = get_db_connection()
             if not conn:
                 logging.error("No se pudo conectar a la base de datos")
                 return
             
             cursor = conn.cursor()
-            
-            # Consulta directa
             query = """
-                SELECT id, note_text, created_at, ISNULL(user_name, 'Sistema') as user_name
+                SELECT note_text, created_at, ISNULL(user_name, 'Sistema') as user_name
                 FROM Notes
                 WHERE client_id = ?
                 ORDER BY created_at DESC
@@ -435,95 +428,172 @@ class ClienteDetalleWindow(QWidget):
             
             cursor.execute(query, (self.client_id,))
             rows = cursor.fetchall()
-            
-            logging.info(f"Filas obtenidas de la base de datos: {len(rows)}")
-            
-            notes = []
-            for row in rows:
-                try:
-                    # Log de cada fila
-                    logging.info(f"Procesando fila: {row}")
-                    
-                    note = {
-                        'id': row[0] if row[0] else 0,
-                        'text': row[1] if row[1] else 'Sin texto',
-                        'timestamp': row[2] if row[2] else datetime.now(),
-                        'user_name': row[3] if row[3] else 'Sistema'
-                    }
-                    notes.append(note)
-                    logging.info(f"Nota procesada: {note}")
-                    
-                except Exception as e:
-                    logging.error(f"Error procesando fila {row}: {e}")
-                    continue
-            
             conn.close()
             
-            logging.info(f"Total de notas a mostrar: {len(notes)}")
-            self.refresh_notes_display(notes)
+            logging.info(f"ENCONTRADAS {len(rows)} NOTAS EN LA BASE DE DATOS")
+            
+            # Limpiar el layout de notas
+            while self.notes_layout.count():
+                child = self.notes_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+            
+            # Si no hay notas, mostrar mensaje
+            if not rows:
+                no_notes_label = QLabel("📝 No hay notas para este cliente")
+                no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                no_notes_label.setStyleSheet("color: gray; font-style: italic; padding: 20px;")
+                self.notes_layout.addWidget(no_notes_label)
+                logging.info("No hay notas - mostrando mensaje")
+                return
+            
+            # Agregar cada nota
+            for i, row in enumerate(rows):
+                logging.info(f"Agregando nota {i+1}: {row[0][:30]}...")
+                
+                # Frame para la nota
+                note_frame = QFrame()
+                note_frame.setStyleSheet("""
+                    QFrame {
+                        background-color: #f9f9f9;
+                        border: 1px solid #ddd;
+                        border-radius: 5px;
+                        margin: 3px;
+                        padding: 8px;
+                    }
+                """)
+                
+                note_layout = QVBoxLayout()
+                
+                # Fecha y usuario
+                fecha_str = row[1].strftime('%d/%m/%Y %H:%M') if row[1] else 'Sin fecha'
+                usuario_str = row[2] if row[2] else 'Sistema'
+                
+                header_label = QLabel(f"📅 {fecha_str} - 👤 {usuario_str}")
+                header_label.setFont(QFont("Arial", 9))
+                header_label.setStyleSheet("color: #666; font-weight: bold;")
+                
+                # Texto de la nota
+                text_label = QLabel(row[0])
+                text_label.setWordWrap(True)
+                text_label.setFont(QFont("Arial", 10))
+                text_label.setStyleSheet("color: #333; margin-top: 3px;")
+                
+                note_layout.addWidget(header_label)
+                note_layout.addWidget(text_label)
+                note_frame.setLayout(note_layout)
+                
+                self.notes_layout.addWidget(note_frame)
+                logging.info(f"Nota {i+1} agregada al layout")
+            
+            # Espaciador al final
+            self.notes_layout.addStretch()
+            
+            logging.info(f"=== CARGA COMPLETADA: {len(rows)} NOTAS MOSTRADAS ===")
             
         except Exception as e:
-            logging.error(f"Error al cargar notas: {e}")
+            logging.error(f"ERROR EN load_client_notes: {e}")
             import traceback
-            logging.error(f"Traceback completo: {traceback.format_exc()}")
-            # Mostrar lista vacía en caso de error
-            self.refresh_notes_display([])
+            logging.error(traceback.format_exc())
+        
+    def create_timeline_frame_if_missing(self):
+        """Crea el componente de timeline si no existe"""
+        if not hasattr(self, 'notes_widget') or not hasattr(self, 'notes_layout'):
+            logging.warning("Recreando componente de timeline que faltaba")
+            
+            # Buscar el frame de timeline en el layout principal
+            main_widget = self.findChild(QWidget)
+            if main_widget:
+                layout = main_widget.layout()
+                if layout and layout.count() >= 2:
+                    # Asumir que timeline es el segundo item
+                    self.create_timeline_frame(layout)
         
     def refresh_notes_display(self, notes):
-        """Actualiza la visualización de las notas"""
+        """Actualiza la visualización de las notas - VERSIÓN MEJORADA"""
         try:
             logging.info(f"refresh_notes_display llamada con {len(notes)} notas")
             
-            # Verificar que notes_layout existe
+            # Verificación doble de notes_layout
             if not hasattr(self, 'notes_layout') or not self.notes_layout:
-                logging.error("notes_layout no existe o es None")
+                logging.error("notes_layout no existe en refresh_notes_display")
                 return
             
             # Limpiar notas existentes de forma segura
-            for i in reversed(range(self.notes_layout.count())): 
-                child = self.notes_layout.itemAt(i)
+            while self.notes_layout.count():
+                child = self.notes_layout.takeAt(0)
                 if child and child.widget():
                     widget = child.widget()
                     widget.setParent(None)
                     widget.deleteLater()
             
+            # Verificar que tenemos notas para mostrar
+            if not notes:
+                # Mostrar mensaje de "no hay notas"
+                no_notes_label = QLabel("No hay notas registradas para este cliente")
+                no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                no_notes_label.setStyleSheet("color: gray; font-style: italic; padding: 20px;")
+                self.notes_layout.addWidget(no_notes_label)
+                self.notes_layout.addStretch()
+                return
+            
             # Agregar nuevas notas
             for idx, note in enumerate(notes):
-                logging.info(f"Agregando nota {idx}: {note}")
-                
-                note_frame = QFrame()
-                note_frame.setProperty("class", "note-frame")
-                note_layout = QVBoxLayout()
-                
-                # Header con fecha y usuario
-                header_layout = QHBoxLayout()
-                
-                timestamp = note['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-                date_label = QLabel(f"Nota del {timestamp}")
-                date_label.setProperty("class", "field-label")
-                
-                user_label = QLabel(f"Por: {note['user_name']}")
-                user_label.setStyleSheet("font-style: italic; color: gray;")
-                
-                header_layout.addWidget(date_label)
-                header_layout.addWidget(user_label)
-                header_layout.addStretch()
-                
-                # Texto de la nota
-                text_label = QLabel(note['text'])
-                text_label.setWordWrap(True)
-                text_label.setStyleSheet("margin-top: 5px;")
-                
-                note_layout.addLayout(header_layout)
-                note_layout.addWidget(text_label)
-                
-                note_frame.setLayout(note_layout)
-                self.notes_layout.addWidget(note_frame)
-                
-                logging.info(f"Nota {idx} agregada correctamente")
+                try:
+                    logging.info(f"Agregando nota {idx}: {note.get('text', 'Sin texto')[:50]}...")
+                    
+                    note_frame = QFrame()
+                    note_frame.setProperty("class", "note-frame")
+                    note_layout = QVBoxLayout()
+                    note_layout.setContentsMargins(8, 8, 8, 8)
+                    
+                    # Header con fecha y usuario
+                    header_layout = QHBoxLayout()
+                    
+                    # Formatear timestamp
+                    timestamp = note.get('timestamp', datetime.now())
+                    if isinstance(timestamp, datetime):
+                        timestamp_str = timestamp.strftime('%d/%m/%Y %H:%M')
+                    else:
+                        timestamp_str = str(timestamp)
+                    
+                    date_label = QLabel(f"📅 {timestamp_str}")
+                    date_label.setFont(QFont("Arial", 9, QFont.Weight.Bold))
+                    date_label.setStyleSheet("color: #666;")
+                    
+                    user_label = QLabel(f"👤 {note.get('user_name', 'Sistema')}")
+                    user_label.setFont(QFont("Arial", 9))
+                    user_label.setStyleSheet("color: #888; font-style: italic;")
+                    
+                    header_layout.addWidget(date_label)
+                    header_layout.addStretch()
+                    header_layout.addWidget(user_label)
+                    
+                    # Texto de la nota
+                    text_label = QLabel(note.get('text', 'Sin texto'))
+                    text_label.setWordWrap(True)
+                    text_label.setFont(QFont("Arial", 10))
+                    text_label.setStyleSheet("margin-top: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 3px;")
+                    
+                    note_layout.addLayout(header_layout)
+                    note_layout.addWidget(text_label)
+                    
+                    note_frame.setLayout(note_layout)
+                    self.notes_layout.addWidget(note_frame)
+                    
+                    logging.info(f"Nota {idx} agregada correctamente")
+                    
+                except Exception as e:
+                    logging.error(f"Error agregando nota {idx}: {e}")
+                    continue
             
             # Agregar espaciador al final
             self.notes_layout.addStretch()
+            
+            # Forzar actualización visual
+            if hasattr(self, 'notes_widget'):
+                self.notes_widget.updateGeometry()
+                self.notes_widget.update()
             
             logging.info("refresh_notes_display completado exitosamente")
                 
@@ -531,17 +601,46 @@ class ClienteDetalleWindow(QWidget):
             logging.error(f"Error en refresh_notes_display: {e}")
             import traceback
             logging.error(f"Traceback: {traceback.format_exc()}")
-        
+
     def show_note_dialog(self):
-        """Muestra el diálogo para agregar una nota"""
-        dialog = NoteDialog(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            note_text = dialog.get_note_text()
-            if note_text and self.save_note_to_db(self.client_id, note_text):
-                self.load_client_notes()
-            else:
-                QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
+        """Muestra el diálogo para agregar una nota con manejo completo de errores"""
+        try:
+            dialog = NoteDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                note_text = dialog.get_note_text()
+                if not note_text or not note_text.strip():
+                    QMessageBox.warning(self, "Advertencia", "Por favor ingrese una nota válida")
+                    return
+                        
+                # Guardar la nota
+                if self.save_note_to_db(self.client_id, note_text.strip()):
+                    # Recargar notas después de guardar
+                    self.load_client_notes()
+                    QMessageBox.information(self, "Éxito", "Nota guardada correctamente")
+                else:
+                    QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
+                    
+        except Exception as e:
+            logging.error(f"Error en diálogo de nota: {e}")
+            QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")
+    
+    def create_quick_note(self, note_text):
+        """Crea una nota rápida - VERSIÓN MEJORADA"""
+        try:
+            if not note_text or not note_text.strip():
+                logging.warning("Intento de crear nota rápida vacía")
+                return
                 
+            if self.save_note_to_db(self.client_id, note_text.strip()):
+                self.load_client_notes()
+                logging.info(f"Nota rápida creada: {note_text[:50]}...")
+            else:
+                QMessageBox.warning(self, "Error", "No se pudo guardar la nota rápida")
+                
+        except Exception as e:
+            logging.error(f"Error en nota rápida: {e}")
+            QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")
+        
     def show_telefono_dialog(self):
         """Muestra el diálogo para agregar/actualizar teléfono"""
         dialog = TelefonoDialog(self, self.client_data.get('telefono3', ''))
@@ -605,13 +704,6 @@ class ClienteDetalleWindow(QWidget):
                 QMessageBox.information(self, "Éxito", "Fecha de promesa guardada correctamente")
             else:
                 QMessageBox.warning(self, "Error", "No se pudo guardar la fecha de promesa")
-                
-    def create_quick_note(self, note_text):
-        """Crea una nota rápida"""
-        if self.save_note_to_db(self.client_id, note_text):
-            self.load_client_notes()
-        else:
-            QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
             
     def abrir_whatsapp(self):
         """Abre WhatsApp con el número del cliente"""
@@ -848,37 +940,6 @@ class ClienteDetalleWindow(QWidget):
         finally:
             if conn:
                 conn.close()
-    
-    def show_note_dialog(self):
-        """Muestra el diálogo para agregar una nota con manejo de errores"""
-        try:
-            dialog = NoteDialog(self)
-            if dialog.exec() == QDialog.DialogCode.Accepted:
-                note_text = dialog.get_note_text()
-                if not note_text:
-                    QMessageBox.warning(self, "Advertencia", "Por favor ingrese una nota")
-                    return
-                    
-                if self.save_note_to_db(self.client_id, note_text):
-                    # Recargar notas
-                    self.load_client_notes()
-                    QMessageBox.information(self, "Éxito", "Nota guardada correctamente")
-                else:
-                    QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
-        except Exception as e:
-            logging.error(f"Error en diálogo de nota: {e}")
-            QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")
-            
-    def create_quick_note(self, note_text):
-        """Crea una nota rápida"""
-        try:
-            if self.save_note_to_db(self.client_id, note_text):
-                self.load_client_notes()
-            else:
-                QMessageBox.warning(self, "Error", "No se pudo guardar la nota")
-        except Exception as e:
-            logging.error(f"Error en nota rápida: {e}")
-            QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")
             
     def get_adeudos_from_db(self):
         """Obtiene los adeudos del cliente"""

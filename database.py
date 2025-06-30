@@ -364,54 +364,46 @@ def get_client_states() -> dict:
     finally:
         conn.close()
 # database.py
-def get_client_notes(client_id: str = None) -> dict:
+def get_client_notes(client_id: str) -> list:
     """
-    Obtiene las notas de un cliente específico o de todos los clientes.
+    Obtiene las notas de un cliente específico.
+    Retorna una lista de diccionarios con las notas.
     """
     conn = get_db_connection()
     if not conn:
         logging.error("No se pudo establecer conexión con la base de datos")
-        return {}
+        return []
     
     try:
         cursor = conn.cursor()
-        if client_id:
-            query = """
-                SELECT client_id, note_text, created_at
-                FROM dbo.Notes
-                WHERE client_id = ?
-                ORDER BY created_at DESC
-            """
-            cursor.execute(query, (client_id,))
-        else:
-            query = """
-                SELECT client_id, note_text, created_at
-                FROM dbo.Notes
-                ORDER BY client_id, created_at DESC
-            """
-            cursor.execute(query)
-            
+        query = """
+            SELECT id, note_text, created_at, ISNULL(user_name, 'Sistema') as user_name
+            FROM Notes
+            WHERE client_id = ?
+            ORDER BY created_at DESC
+        """
+        cursor.execute(query, (client_id,))
         results = cursor.fetchall()
         
-        # Agrupar notas por cliente
-        notes_data = {}
+        notes = []
         for row in results:
-            client_key = str(row.client_id)
-            if client_key not in notes_data:
-                notes_data[client_key] = []
-            
-            notes_data[client_key].append({
-                "text": row.note_text,
-                "created_at": row.created_at.isoformat() if row.created_at else None
-            })
+            note = {
+                'id': row.id if hasattr(row, 'id') else 0,
+                'text': row.note_text if hasattr(row, 'note_text') else 'Sin texto',
+                'created_at': row.created_at.isoformat() if hasattr(row, 'created_at') and row.created_at else datetime.now().isoformat(),
+                'user_name': row.user_name if hasattr(row, 'user_name') else 'Sistema'
+            }
+            notes.append(note)
         
-        if client_id:
-            return notes_data.get(str(client_id), [])
-        return notes_data
+        logging.info(f"Se obtuvieron {len(notes)} notas para el cliente {client_id}")
+        return notes
         
     except pyodbc.Error as e:
-        logging.error(f"Error al obtener notas de clientes: {e}")
-        return {} if client_id is None else []
+        logging.error(f"Error al obtener notas del cliente {client_id}: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Error inesperado al obtener notas del cliente {client_id}: {e}")
+        return []
     finally:
         conn.close()
 
