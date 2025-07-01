@@ -35,6 +35,11 @@ logging.basicConfig(
     ]
 )
 
+try:
+    from updater_pyqt import UpdaterDialog
+except ImportError:
+    UpdaterDialog = None
+
 version = "v1.0"
 
 class CobranzaApp(QWidget):
@@ -86,88 +91,91 @@ class CobranzaApp(QWidget):
         self.setup_auto_update()
 
     def initUI(self):
-        self.setWindowTitle(f"Sistema de Cobranza {version}")
-        self.setGeometry(100, 100, 1400, 900)
-        
-        # Estilo CSS
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self.COLOR_BLANCO};
-                color: {self.COLOR_NEGRO};
-                font-family: Arial;
-            }}
+            self.setWindowTitle(f"Sistema de Cobranza {version}")
+            self.setGeometry(100, 100, 1400, 900)
             
-            QTableWidget {{
-                background-color: white;
-                selection-background-color: {self.COLOR_ROJO};
-                color: black;
-                gridline-color: #E0E0E0;
-                font-size: 11px;
-            }}
+            # Estilo CSS
+            self.setStyleSheet(f"""
+                QWidget {{
+                    background-color: {self.COLOR_BLANCO};
+                    color: {self.COLOR_NEGRO};
+                    font-family: Arial;
+                }}
+                
+                QTableWidget {{
+                    background-color: white;
+                    selection-background-color: {self.COLOR_ROJO};
+                    color: black;
+                    gridline-color: #E0E0E0;
+                    font-size: 11px;
+                }}
+                
+                QTableWidget::item {{
+                    padding: 8px;
+                    border-bottom: 1px solid #E0E0E0;
+                }}
+                
+                QTableWidget QHeaderView::section {{
+                    background-color: #F5F5F5;
+                    color: black;
+                    padding: 8px;
+                    border: 1px solid #E0E0E0;
+                    font-weight: bold;
+                }}
+                
+                QFrame[frameShape="4"] {{
+                    background-color: {self.COLOR_ROJO};
+                    border: none;
+                    max-height: 2px;
+                }}
+                
+                .header-frame {{
+                    background-color: {self.COLOR_ROJO};
+                }}
+                
+                .tab-button {{
+                    background-color: {self.COLOR_ROJO};
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    font-weight: bold;
+                    font-size: 12px;
+                }}
+                
+                .tab-button:checked {{
+                    background-color: white;
+                    color: {self.COLOR_NEGRO};
+                }}
+                
+                .tab-button:hover {{
+                    background-color: #C41E32;
+                }}
+                
+                .category-frame {{
+                    border: 2px solid #E0E0E0;
+                    border-radius: 8px;
+                    margin: 5px;
+                    padding: 5px;
+                }}
+            """)
             
-            QTableWidget::item {{
-                padding: 8px;
-                border-bottom: 1px solid #E0E0E0;
-            }}
+            main_layout = QVBoxLayout()
+            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.setSpacing(0)
             
-            QTableWidget QHeaderView::section {{
-                background-color: #F5F5F5;
-                color: black;
-                padding: 8px;
-                border: 1px solid #E0E0E0;
-                font-weight: bold;
-            }}
+            # NUEVO: Menú ANTES del header
+            self.create_menu_bar(main_layout)
             
-            QFrame[frameShape="4"] {{
-                background-color: {self.COLOR_ROJO};
-                border: none;
-                max-height: 2px;
-            }}
+            # Header con logo
+            self.create_header(main_layout)
             
-            .header-frame {{
-                background-color: {self.COLOR_ROJO};
-            }}
+            # Botones de pestañas
+            self.create_tab_buttons(main_layout)
             
-            .tab-button {{
-                background-color: {self.COLOR_ROJO};
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                font-weight: bold;
-                font-size: 12px;
-            }}
+            # Área principal de contenido
+            self.create_main_content(main_layout)
             
-            .tab-button:checked {{
-                background-color: white;
-                color: {self.COLOR_NEGRO};
-            }}
-            
-            .tab-button:hover {{
-                background-color: #C41E32;
-            }}
-            
-            .category-frame {{
-                border: 2px solid #E0E0E0;
-                border-radius: 8px;
-                margin: 5px;
-                padding: 5px;
-            }}
-        """)
-        
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        # Header con logo
-        self.create_header(main_layout)
-        
-        # Botones de pestañas
-        self.create_tab_buttons(main_layout)
-        
-        # Área principal de contenido
-        self.create_main_content(main_layout)
-        
-        self.setLayout(main_layout)
+            self.setLayout(main_layout)
 
     def create_header(self, layout):
         """Crear el header con logo y título"""
@@ -208,6 +216,56 @@ class CobranzaApp(QWidget):
         header_frame.setLayout(header_layout)
         layout.addWidget(header_frame)
 
+    def create_menu_bar(self, layout):
+        """Crear la barra de menú con opción de actualización"""
+        self.menu_bar = QMenuBar()
+        self.menu_bar.setStyleSheet(f"""
+            QMenuBar {{
+                background-color: {self.COLOR_BLANCO};
+                color: {self.COLOR_NEGRO};
+                border-bottom: 2px solid {self.COLOR_ROJO};
+                padding: 4px;
+                font-weight: bold;
+            }}
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 8px 12px;
+                margin: 2px;
+                border-radius: 4px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {self.COLOR_ROJO};
+                color: white;
+            }}
+            QMenu {{
+                background-color: {self.COLOR_BLANCO};
+                color: {self.COLOR_NEGRO};
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 8px 20px;
+                border-radius: 4px;
+                margin: 1px;
+            }}
+            QMenu::item:selected {{
+                background-color: {self.COLOR_ROJO};
+                color: white;
+            }}
+        """)
+        
+        # Menú Herramientas
+        tools_menu = self.menu_bar.addMenu("🛠️ Herramientas")
+        
+        # Acción de actualización
+        update_action = QAction("🔄 Actualizar Aplicación", self)
+        update_action.triggered.connect(self.actualizar_app)
+        tools_menu.addAction(update_action)
+        
+        layout.addWidget(self.menu_bar)
+    
+    
     def create_debt_info(self, layout):
         """Crear la información de deuda total en el header"""
         debt_frame = QFrame()
@@ -1001,6 +1059,20 @@ class CobranzaApp(QWidget):
         except Exception as e:
             logging.error(f"Error al abrir detalles del cliente: {e}")
             QMessageBox.critical(self, "Error", f"Error al abrir detalles del cliente: {str(e)}")
+    
+    def actualizar_app(self):
+        """Abre el actualizador"""
+        if UpdaterDialog is None:
+            QMessageBox.warning(self, "Error", "Módulo de actualización no disponible")
+            return
+        
+        reply = QMessageBox.question(self, "Actualizar", 
+            "¿Actualizar la aplicación?\nSe cerrará durante el proceso.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            updater = UpdaterDialog(self)
+            updater.exec()
 
 def main():
     try:
