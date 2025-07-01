@@ -16260,3 +16260,1021 @@
 2025-06-30 18:16:50,861 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
 2025-06-30 18:16:50,861 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
 2025-06-30 18:16:50,861 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00
+2025-06-30 18:21:50,868 - INFO - Cargando datos desde la base de datos...
+2025-06-30 18:21:50,868 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:21:50,893 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:21:50,893 - INFO - Ejecutando consulta SQL: 
+            SELECT 
+                Clave,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Nombre, '') as Nombre,
+                ISNULL(Direccion, '') as Direccion,
+                ISNULL(Telefono1, '') as Telefono1,
+                ISNULL(Telefono2, '') as Telefono2,
+                ISNULL(Telefono3, '') as Telefono3,  -- NUEVA LÍNEA
+                ISNULL(Descripcion, '') as Descripcion,
+                ISNULL(Email, '') as Email,
+                ISNULL(Referencia, '') as Referencia,
+                ISNULL(Obs, '') as Obs,
+                ISNULL(Credito, 0) as Credito,
+                ISNULL(MontoCredito, 0) as MontoCredito,
+                ISNULL(DiasCredito, 0) as DiasCredito,
+                ISNULL(InteresCredito, '') as InteresCredito,
+                ISNULL(Saldo, 0) as Saldo,
+                ISNULL(NL, 0) as NL,
+                ISNULL(NC, '') as NC,
+                ISNULL(Membresia, '') as Membresia,
+                ISNULL(Nivel, 0) as Nivel,
+                ISNULL(Modificado, '') as Modificado,
+                ISNULL(Et1, '') as Et1,
+                ISNULL(LineaDeCredito, '') as LineaDeCredito
+            FROM Clientes4
+            WHERE Saldo > 0
+        
+2025-06-30 18:21:50,899 - INFO - Registros encontrados: 86
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 21
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 1067
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 19
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 408
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 41
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 823
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 44
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 694
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 51
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 878
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 573
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 978
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 252
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 807
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 532
+2025-06-30 18:21:50,899 - WARNING - Valor de fecha no válido: 589
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 886
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 85
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 89
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 108
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 778
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 125
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 859
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 141
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 984
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 1113
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 761
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 798
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 165
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 181
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 191
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 187
+2025-06-30 18:21:50,900 - WARNING - Valor de fecha no válido: 216
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 231
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 217
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 745
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 720
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 337
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 801
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 351
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 743
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 443
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 1075
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 1140
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 1142
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 799
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 500
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 200
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 451
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 392
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 488
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 540
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 817
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 601
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 909
+2025-06-30 18:21:50,901 - WARNING - Valor de fecha no válido: 535
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 564
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 629
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 673
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 977
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1101
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 775
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 986
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 850
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 567
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1079
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 907
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 916
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 646
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 605
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 994
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1008
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1033
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1103
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1096
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1109
+2025-06-30 18:21:50,902 - WARNING - Valor de fecha no válido: 1115
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1118
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1121
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1124
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1130
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1129
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1135
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1136
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1137
+2025-06-30 18:21:50,903 - WARNING - Valor de fecha no válido: 1138
+2025-06-30 18:21:50,903 - INFO - Datos procesados exitosamente. Total de registros: 86
+2025-06-30 18:21:50,903 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:21:50,906 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:21:50,907 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:21:50,907 - INFO - Ejecutando consulta SQL para Ventas: 
+            SELECT 
+                Folio,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(CveCte, '') as CveCte,
+                ISNULL(Cliente, '') as Cliente,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Hora, '') as Hora,
+                ISNULL(Total, 0) as Total,
+                ISNULL(Restante, 0) as Restante,
+                ISNULL(FechaPago, '') as FechaPago,
+                ISNULL(Paga, 0) as Paga,
+                ISNULL(Cambio, '') as Cambio,
+                ISNULL(Ticket, '') as Ticket,
+                ISNULL(Condiciones, '') as Condiciones,
+                ISNULL(FechaProg, '') as FechaProg,
+                ISNULL(Corte, 0) as Corte,
+                ISNULL(Vendedor, '') as Vendedor,
+                ISNULL(ComoPago, '') as ComoPago,
+                ISNULL(DiasCred, 0) as DiasCred,
+                ISNULL(IntCred, '') as IntCred,
+                ISNULL(Articulos, '') as Articulos,
+                ISNULL(BarCuenta, '') as BarCuenta,
+                ISNULL(BarMesero, '') as BarMesero,
+                ISNULL(NotasAdicionales, '') as NotasAdicionales,
+                ISNULL(IdBarCuenta, '') as IdBarCuenta,
+                ISNULL(Bitacora, '') as Bitacora,
+                ISNULL(Anticipo, 0) as Anticipo,
+                ISNULL(FolioPago, '') as FolioPago,
+                ISNULL(SaldoCliente, 0) as SaldoCliente,
+                ISNULL(Caja, 0) as Caja
+            FROM Ventas
+            WHERE Estado != 'PAGADA'
+            AND Estado != 'CANCELADA'
+            AND Estado IS NOT NULL
+            AND Restante > 0
+        
+2025-06-30 18:21:50,941 - INFO - Registros de Ventas encontrados: 160
+2025-06-30 18:21:50,943 - INFO - Datos de Ventas procesados exitosamente. Total de registros: 160
+2025-06-30 18:21:50,944 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:21:50,946 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:21:50,948 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:21:50,952 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:21:50,953 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:21:50,959 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
+2025-06-30 18:21:50,959 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
+2025-06-30 18:21:50,959 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00
+2025-06-30 18:22:35,313 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:22:35,352 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:22:35,405 - INFO - Ícono establecido: lga2.ico
+2025-06-30 18:22:35,407 - INFO - Ícono de ventana establecido: lga2.ico
+2025-06-30 18:22:35,427 - INFO - Cargando datos desde la base de datos...
+2025-06-30 18:22:35,428 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:22:35,440 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:22:35,440 - INFO - Ejecutando consulta SQL: 
+            SELECT 
+                Clave,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Nombre, '') as Nombre,
+                ISNULL(Direccion, '') as Direccion,
+                ISNULL(Telefono1, '') as Telefono1,
+                ISNULL(Telefono2, '') as Telefono2,
+                ISNULL(Telefono3, '') as Telefono3,  -- NUEVA LÍNEA
+                ISNULL(Descripcion, '') as Descripcion,
+                ISNULL(Email, '') as Email,
+                ISNULL(Referencia, '') as Referencia,
+                ISNULL(Obs, '') as Obs,
+                ISNULL(Credito, 0) as Credito,
+                ISNULL(MontoCredito, 0) as MontoCredito,
+                ISNULL(DiasCredito, 0) as DiasCredito,
+                ISNULL(InteresCredito, '') as InteresCredito,
+                ISNULL(Saldo, 0) as Saldo,
+                ISNULL(NL, 0) as NL,
+                ISNULL(NC, '') as NC,
+                ISNULL(Membresia, '') as Membresia,
+                ISNULL(Nivel, 0) as Nivel,
+                ISNULL(Modificado, '') as Modificado,
+                ISNULL(Et1, '') as Et1,
+                ISNULL(LineaDeCredito, '') as LineaDeCredito
+            FROM Clientes4
+            WHERE Saldo > 0
+        
+2025-06-30 18:22:35,445 - INFO - Registros encontrados: 86
+2025-06-30 18:22:35,448 - WARNING - Valor de fecha no válido: 21
+2025-06-30 18:22:35,448 - WARNING - Valor de fecha no válido: 1067
+2025-06-30 18:22:35,448 - WARNING - Valor de fecha no válido: 19
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 408
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 41
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 823
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 44
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 694
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 51
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 878
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 573
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 978
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 252
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 807
+2025-06-30 18:22:35,449 - WARNING - Valor de fecha no válido: 532
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 589
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 886
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 85
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 89
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 108
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 778
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 125
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 859
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 141
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 984
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 1113
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 761
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 798
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 165
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 181
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 191
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 187
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 216
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 231
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 217
+2025-06-30 18:22:35,450 - WARNING - Valor de fecha no válido: 745
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 720
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 337
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 801
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 351
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 743
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 443
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 1075
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 1140
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 1142
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 799
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 500
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 200
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 451
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 392
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 488
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 540
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 817
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 601
+2025-06-30 18:22:35,451 - WARNING - Valor de fecha no válido: 909
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 535
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 564
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 629
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 673
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 977
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1101
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 775
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 986
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 850
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 567
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1079
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 907
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 916
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 646
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 605
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 994
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1008
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1033
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1103
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1096
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1109
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1115
+2025-06-30 18:22:35,452 - WARNING - Valor de fecha no válido: 1118
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1121
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1124
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1130
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1129
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1135
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1136
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1137
+2025-06-30 18:22:35,453 - WARNING - Valor de fecha no válido: 1138
+2025-06-30 18:22:35,453 - INFO - Datos procesados exitosamente. Total de registros: 86
+2025-06-30 18:22:35,453 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:22:35,455 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:22:35,456 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:22:35,457 - INFO - Ejecutando consulta SQL para Ventas: 
+            SELECT 
+                Folio,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(CveCte, '') as CveCte,
+                ISNULL(Cliente, '') as Cliente,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Hora, '') as Hora,
+                ISNULL(Total, 0) as Total,
+                ISNULL(Restante, 0) as Restante,
+                ISNULL(FechaPago, '') as FechaPago,
+                ISNULL(Paga, 0) as Paga,
+                ISNULL(Cambio, '') as Cambio,
+                ISNULL(Ticket, '') as Ticket,
+                ISNULL(Condiciones, '') as Condiciones,
+                ISNULL(FechaProg, '') as FechaProg,
+                ISNULL(Corte, 0) as Corte,
+                ISNULL(Vendedor, '') as Vendedor,
+                ISNULL(ComoPago, '') as ComoPago,
+                ISNULL(DiasCred, 0) as DiasCred,
+                ISNULL(IntCred, '') as IntCred,
+                ISNULL(Articulos, '') as Articulos,
+                ISNULL(BarCuenta, '') as BarCuenta,
+                ISNULL(BarMesero, '') as BarMesero,
+                ISNULL(NotasAdicionales, '') as NotasAdicionales,
+                ISNULL(IdBarCuenta, '') as IdBarCuenta,
+                ISNULL(Bitacora, '') as Bitacora,
+                ISNULL(Anticipo, 0) as Anticipo,
+                ISNULL(FolioPago, '') as FolioPago,
+                ISNULL(SaldoCliente, 0) as SaldoCliente,
+                ISNULL(Caja, 0) as Caja
+            FROM Ventas
+            WHERE Estado != 'PAGADA'
+            AND Estado != 'CANCELADA'
+            AND Estado IS NOT NULL
+            AND Restante > 0
+        
+2025-06-30 18:22:35,492 - INFO - Registros de Ventas encontrados: 160
+2025-06-30 18:22:35,495 - INFO - Datos de Ventas procesados exitosamente. Total de registros: 160
+2025-06-30 18:22:35,496 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:22:35,498 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:22:35,500 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:22:35,503 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:22:35,504 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:22:35,511 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
+2025-06-30 18:22:35,511 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
+2025-06-30 18:22:35,512 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00
+2025-06-30 18:23:10,986 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:11,022 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:11,078 - INFO - Ícono establecido: lga2.ico
+2025-06-30 18:23:11,080 - INFO - Ícono de ventana establecido: lga2.ico
+2025-06-30 18:23:11,111 - INFO - Cargando datos desde la base de datos...
+2025-06-30 18:23:11,111 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:11,125 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:11,125 - INFO - Ejecutando consulta SQL: 
+            SELECT 
+                Clave,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Nombre, '') as Nombre,
+                ISNULL(Direccion, '') as Direccion,
+                ISNULL(Telefono1, '') as Telefono1,
+                ISNULL(Telefono2, '') as Telefono2,
+                ISNULL(Telefono3, '') as Telefono3,  -- NUEVA LÍNEA
+                ISNULL(Descripcion, '') as Descripcion,
+                ISNULL(Email, '') as Email,
+                ISNULL(Referencia, '') as Referencia,
+                ISNULL(Obs, '') as Obs,
+                ISNULL(Credito, 0) as Credito,
+                ISNULL(MontoCredito, 0) as MontoCredito,
+                ISNULL(DiasCredito, 0) as DiasCredito,
+                ISNULL(InteresCredito, '') as InteresCredito,
+                ISNULL(Saldo, 0) as Saldo,
+                ISNULL(NL, 0) as NL,
+                ISNULL(NC, '') as NC,
+                ISNULL(Membresia, '') as Membresia,
+                ISNULL(Nivel, 0) as Nivel,
+                ISNULL(Modificado, '') as Modificado,
+                ISNULL(Et1, '') as Et1,
+                ISNULL(LineaDeCredito, '') as LineaDeCredito
+            FROM Clientes4
+            WHERE Saldo > 0
+        
+2025-06-30 18:23:11,130 - INFO - Registros encontrados: 86
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 21
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 1067
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 19
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 408
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 41
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 823
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 44
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 694
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 51
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 878
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 573
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 978
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 252
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 807
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 532
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 589
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 886
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 85
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 89
+2025-06-30 18:23:11,133 - WARNING - Valor de fecha no válido: 108
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 778
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 125
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 859
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 141
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 984
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 1113
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 761
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 798
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 165
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 181
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 191
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 187
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 216
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 231
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 217
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 745
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 720
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 337
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 801
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 351
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 743
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 443
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 1075
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 1140
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 1142
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 799
+2025-06-30 18:23:11,135 - WARNING - Valor de fecha no válido: 500
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 200
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 451
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 392
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 488
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 540
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 817
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 601
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 909
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 535
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 564
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 629
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 673
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 977
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1101
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 775
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 986
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 850
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 567
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1079
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 907
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 916
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 646
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 605
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 994
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1008
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1033
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1103
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1096
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1109
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1115
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1118
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1121
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1124
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1130
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1129
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1135
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1136
+2025-06-30 18:23:11,136 - WARNING - Valor de fecha no válido: 1137
+2025-06-30 18:23:11,137 - WARNING - Valor de fecha no válido: 1138
+2025-06-30 18:23:11,137 - INFO - Datos procesados exitosamente. Total de registros: 86
+2025-06-30 18:23:11,137 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:23:11,140 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:11,141 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:11,141 - INFO - Ejecutando consulta SQL para Ventas: 
+            SELECT 
+                Folio,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(CveCte, '') as CveCte,
+                ISNULL(Cliente, '') as Cliente,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Hora, '') as Hora,
+                ISNULL(Total, 0) as Total,
+                ISNULL(Restante, 0) as Restante,
+                ISNULL(FechaPago, '') as FechaPago,
+                ISNULL(Paga, 0) as Paga,
+                ISNULL(Cambio, '') as Cambio,
+                ISNULL(Ticket, '') as Ticket,
+                ISNULL(Condiciones, '') as Condiciones,
+                ISNULL(FechaProg, '') as FechaProg,
+                ISNULL(Corte, 0) as Corte,
+                ISNULL(Vendedor, '') as Vendedor,
+                ISNULL(ComoPago, '') as ComoPago,
+                ISNULL(DiasCred, 0) as DiasCred,
+                ISNULL(IntCred, '') as IntCred,
+                ISNULL(Articulos, '') as Articulos,
+                ISNULL(BarCuenta, '') as BarCuenta,
+                ISNULL(BarMesero, '') as BarMesero,
+                ISNULL(NotasAdicionales, '') as NotasAdicionales,
+                ISNULL(IdBarCuenta, '') as IdBarCuenta,
+                ISNULL(Bitacora, '') as Bitacora,
+                ISNULL(Anticipo, 0) as Anticipo,
+                ISNULL(FolioPago, '') as FolioPago,
+                ISNULL(SaldoCliente, 0) as SaldoCliente,
+                ISNULL(Caja, 0) as Caja
+            FROM Ventas
+            WHERE Estado != 'PAGADA'
+            AND Estado != 'CANCELADA'
+            AND Estado IS NOT NULL
+            AND Restante > 0
+        
+2025-06-30 18:23:11,169 - INFO - Registros de Ventas encontrados: 160
+2025-06-30 18:23:11,172 - INFO - Datos de Ventas procesados exitosamente. Total de registros: 160
+2025-06-30 18:23:11,172 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:23:11,173 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:11,174 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:11,177 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:11,178 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:11,184 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
+2025-06-30 18:23:11,184 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
+2025-06-30 18:23:11,184 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00
+2025-06-30 18:23:38,058 - INFO - Ícono de ventana de detalles establecido: lga2.ico
+2025-06-30 18:23:38,059 - INFO - notes_layout creado: <PyQt6.QtWidgets.QVBoxLayout object at 0x000001CDB3DECD70>
+2025-06-30 18:23:38,059 - INFO - notes_widget creado: <PyQt6.QtWidgets.QWidget object at 0x000001CDB3DECCD0>
+2025-06-30 18:23:38,059 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:38,061 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:38,086 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:38,087 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:38,107 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:38,108 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:38,125 - INFO - === CARGANDO NOTAS PARA CLIENTE: 1500-0179 ===
+2025-06-30 18:23:38,125 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:23:38,125 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:23:38,132 - INFO - ENCONTRADAS 30 NOTAS EN LA BASE DE DATOS
+2025-06-30 18:23:38,132 - INFO - Agregando nota 1: Promesa de pago generada para ...
+2025-06-30 18:23:38,133 - INFO - Nota 1 agregada al layout
+2025-06-30 18:23:38,133 - INFO - Agregando nota 2: Teléfono adicional actualizado...
+2025-06-30 18:23:38,133 - INFO - Nota 2 agregada al layout
+2025-06-30 18:23:38,133 - INFO - Agregando nota 3: Promesa de pago generada para ...
+2025-06-30 18:23:38,133 - INFO - Nota 3 agregada al layout
+2025-06-30 18:23:38,133 - INFO - Agregando nota 4: Promesa de pago generada para ...
+2025-06-30 18:23:38,135 - INFO - Nota 4 agregada al layout
+2025-06-30 18:23:38,135 - INFO - Agregando nota 5: Mandó a buzón de voz...
+2025-06-30 18:23:38,136 - INFO - Nota 5 agregada al layout
+2025-06-30 18:23:38,136 - INFO - Agregando nota 6: Se le notifico via whatsapp...
+2025-06-30 18:23:38,136 - INFO - Nota 6 agregada al layout
+2025-06-30 18:23:38,136 - INFO - Agregando nota 7: Mandó a buzón de voz...
+2025-06-30 18:23:38,137 - INFO - Nota 7 agregada al layout
+2025-06-30 18:23:38,137 - INFO - Agregando nota 8: SONO , PERO NO CONTESTO ....
+2025-06-30 18:23:38,137 - INFO - Nota 8 agregada al layout
+2025-06-30 18:23:38,137 - INFO - Agregando nota 9: SONO Y NO CONTESTO....
+2025-06-30 18:23:38,138 - INFO - Nota 9 agregada al layout
+2025-06-30 18:23:38,138 - INFO - Agregando nota 10: sono y no contesto ....
+2025-06-30 18:23:38,138 - INFO - Nota 10 agregada al layout
+2025-06-30 18:23:38,138 - INFO - Agregando nota 11: NO CONTESTO , MANDO A BUZON ....
+2025-06-30 18:23:38,139 - INFO - Nota 11 agregada al layout
+2025-06-30 18:23:38,139 - INFO - Agregando nota 12: Promesa de pago generada para ...
+2025-06-30 18:23:38,139 - INFO - Nota 12 agregada al layout
+2025-06-30 18:23:38,139 - INFO - Agregando nota 13: se le llamo al 7551713019  per...
+2025-06-30 18:23:38,140 - INFO - Nota 13 agregada al layout
+2025-06-30 18:23:38,140 - INFO - Agregando nota 14: envia a buzon se le notifico v...
+2025-06-30 18:23:38,140 - INFO - Nota 14 agregada al layout
+2025-06-30 18:23:38,140 - INFO - Agregando nota 15: Promesa de pago generada para ...
+2025-06-30 18:23:38,140 - INFO - Nota 15 agregada al layout
+2025-06-30 18:23:38,140 - INFO - Agregando nota 16: Mandó a buzón de voz...
+2025-06-30 18:23:38,141 - INFO - Nota 16 agregada al layout
+2025-06-30 18:23:38,141 - INFO - Agregando nota 17: Mandó a buzón de voz...
+2025-06-30 18:23:38,141 - INFO - Nota 17 agregada al layout
+2025-06-30 18:23:38,141 - INFO - Agregando nota 18: Mandó a buzón de voz...
+2025-06-30 18:23:38,141 - INFO - Nota 18 agregada al layout
+2025-06-30 18:23:38,141 - INFO - Agregando nota 19: Mandó a buzón de voz...
+2025-06-30 18:23:38,142 - INFO - Nota 19 agregada al layout
+2025-06-30 18:23:38,142 - INFO - Agregando nota 20: Mandó a buzón de voz...
+2025-06-30 18:23:38,142 - INFO - Nota 20 agregada al layout
+2025-06-30 18:23:38,142 - INFO - Agregando nota 21: Se le notifico via whatsapp...
+2025-06-30 18:23:38,143 - INFO - Nota 21 agregada al layout
+2025-06-30 18:23:38,143 - INFO - Agregando nota 22: Mandó a buzón de voz...
+2025-06-30 18:23:38,143 - INFO - Nota 22 agregada al layout
+2025-06-30 18:23:38,143 - INFO - Agregando nota 23: Mandó a buzón de voz...
+2025-06-30 18:23:38,143 - INFO - Nota 23 agregada al layout
+2025-06-30 18:23:38,143 - INFO - Agregando nota 24: contesto y despues colgo...
+2025-06-30 18:23:38,143 - INFO - Nota 24 agregada al layout
+2025-06-30 18:23:38,145 - INFO - Agregando nota 25: Promesa de pago generada para ...
+2025-06-30 18:23:38,145 - INFO - Nota 25 agregada al layout
+2025-06-30 18:23:38,145 - INFO - Agregando nota 26: Promesa de pago generada para ...
+2025-06-30 18:23:38,145 - INFO - Nota 26 agregada al layout
+2025-06-30 18:23:38,145 - INFO - Agregando nota 27: Promesa de pago generada para ...
+2025-06-30 18:23:38,146 - INFO - Nota 27 agregada al layout
+2025-06-30 18:23:38,146 - INFO - Agregando nota 28: P.P. pasa el dia 22 de enero...
+2025-06-30 18:23:38,146 - INFO - Nota 28 agregada al layout
+2025-06-30 18:23:38,146 - INFO - Agregando nota 29: Mandó a buzón de voz...
+2025-06-30 18:23:38,147 - INFO - Nota 29 agregada al layout
+2025-06-30 18:23:38,147 - INFO - Agregando nota 30: Mandó a buzón de voz...
+2025-06-30 18:23:38,147 - INFO - Nota 30 agregada al layout
+2025-06-30 18:23:38,147 - INFO - === CARGA COMPLETADA: 30 NOTAS MOSTRADAS ===
+2025-06-30 18:23:38,147 - INFO - Al final de __init__, notes_layout existe: True
+2025-06-30 18:23:38,147 - INFO - notes_layout es None: False
+2025-06-30 18:23:38,147 - INFO - notes_layout count: 31
+2025-06-30 18:28:03,754 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:03,795 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:03,815 - INFO - ID de aplicación establecido para Windows
+2025-06-30 18:28:03,850 - INFO - Ícono establecido correctamente: lga2.ico
+2025-06-30 18:28:03,852 - INFO - Ícono de ventana establecido: lga2.ico
+2025-06-30 18:28:03,879 - INFO - Cargando datos desde la base de datos...
+2025-06-30 18:28:03,879 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:03,898 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:03,898 - INFO - Ejecutando consulta SQL: 
+            SELECT 
+                Clave,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Nombre, '') as Nombre,
+                ISNULL(Direccion, '') as Direccion,
+                ISNULL(Telefono1, '') as Telefono1,
+                ISNULL(Telefono2, '') as Telefono2,
+                ISNULL(Telefono3, '') as Telefono3,  -- NUEVA LÍNEA
+                ISNULL(Descripcion, '') as Descripcion,
+                ISNULL(Email, '') as Email,
+                ISNULL(Referencia, '') as Referencia,
+                ISNULL(Obs, '') as Obs,
+                ISNULL(Credito, 0) as Credito,
+                ISNULL(MontoCredito, 0) as MontoCredito,
+                ISNULL(DiasCredito, 0) as DiasCredito,
+                ISNULL(InteresCredito, '') as InteresCredito,
+                ISNULL(Saldo, 0) as Saldo,
+                ISNULL(NL, 0) as NL,
+                ISNULL(NC, '') as NC,
+                ISNULL(Membresia, '') as Membresia,
+                ISNULL(Nivel, 0) as Nivel,
+                ISNULL(Modificado, '') as Modificado,
+                ISNULL(Et1, '') as Et1,
+                ISNULL(LineaDeCredito, '') as LineaDeCredito
+            FROM Clientes4
+            WHERE Saldo > 0
+        
+2025-06-30 18:28:03,906 - INFO - Registros encontrados: 86
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 21
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 1067
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 19
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 408
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 41
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 823
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 44
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 694
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 51
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 878
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 573
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 978
+2025-06-30 18:28:03,908 - WARNING - Valor de fecha no válido: 252
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 807
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 532
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 589
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 886
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 85
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 89
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 108
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 778
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 125
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 859
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 141
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 984
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 1113
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 761
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 798
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 165
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 181
+2025-06-30 18:28:03,909 - WARNING - Valor de fecha no válido: 191
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 187
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 216
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 231
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 217
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 745
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 720
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 337
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 801
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 351
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 743
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 443
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 1075
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 1140
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 1142
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 799
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 500
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 200
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 451
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 392
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 488
+2025-06-30 18:28:03,910 - WARNING - Valor de fecha no válido: 540
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 817
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 601
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 909
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 535
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 564
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 629
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 673
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 977
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 1101
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 775
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 986
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 850
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 567
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 1079
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 907
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 916
+2025-06-30 18:28:03,911 - WARNING - Valor de fecha no válido: 646
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 605
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 994
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1008
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1033
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1103
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1096
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1109
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1115
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1118
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1121
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1124
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1130
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1129
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1135
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1136
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1137
+2025-06-30 18:28:03,912 - WARNING - Valor de fecha no válido: 1138
+2025-06-30 18:28:03,912 - INFO - Datos procesados exitosamente. Total de registros: 86
+2025-06-30 18:28:03,912 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:28:03,915 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:03,917 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:03,917 - INFO - Ejecutando consulta SQL para Ventas: 
+            SELECT 
+                Folio,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(CveCte, '') as CveCte,
+                ISNULL(Cliente, '') as Cliente,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Hora, '') as Hora,
+                ISNULL(Total, 0) as Total,
+                ISNULL(Restante, 0) as Restante,
+                ISNULL(FechaPago, '') as FechaPago,
+                ISNULL(Paga, 0) as Paga,
+                ISNULL(Cambio, '') as Cambio,
+                ISNULL(Ticket, '') as Ticket,
+                ISNULL(Condiciones, '') as Condiciones,
+                ISNULL(FechaProg, '') as FechaProg,
+                ISNULL(Corte, 0) as Corte,
+                ISNULL(Vendedor, '') as Vendedor,
+                ISNULL(ComoPago, '') as ComoPago,
+                ISNULL(DiasCred, 0) as DiasCred,
+                ISNULL(IntCred, '') as IntCred,
+                ISNULL(Articulos, '') as Articulos,
+                ISNULL(BarCuenta, '') as BarCuenta,
+                ISNULL(BarMesero, '') as BarMesero,
+                ISNULL(NotasAdicionales, '') as NotasAdicionales,
+                ISNULL(IdBarCuenta, '') as IdBarCuenta,
+                ISNULL(Bitacora, '') as Bitacora,
+                ISNULL(Anticipo, 0) as Anticipo,
+                ISNULL(FolioPago, '') as FolioPago,
+                ISNULL(SaldoCliente, 0) as SaldoCliente,
+                ISNULL(Caja, 0) as Caja
+            FROM Ventas
+            WHERE Estado != 'PAGADA'
+            AND Estado != 'CANCELADA'
+            AND Estado IS NOT NULL
+            AND Restante > 0
+        
+2025-06-30 18:28:03,949 - INFO - Registros de Ventas encontrados: 160
+2025-06-30 18:28:03,951 - INFO - Datos de Ventas procesados exitosamente. Total de registros: 160
+2025-06-30 18:28:03,951 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:28:03,953 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:03,954 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:03,959 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:03,959 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:03,966 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
+2025-06-30 18:28:03,966 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
+2025-06-30 18:28:03,966 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00
+2025-06-30 18:28:04,285 - INFO - Íconos de barra de tareas establecidos correctamente
+2025-06-30 18:28:10,534 - INFO - Ícono de ventana de detalles establecido: lga2.ico
+2025-06-30 18:28:10,535 - INFO - notes_layout creado: <PyQt6.QtWidgets.QVBoxLayout object at 0x000001F80D480E10>
+2025-06-30 18:28:10,535 - INFO - notes_widget creado: <PyQt6.QtWidgets.QWidget object at 0x000001F80D480D70>
+2025-06-30 18:28:10,536 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:10,538 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:10,563 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:10,565 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:10,595 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:10,597 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:10,624 - INFO - === CARGANDO NOTAS PARA CLIENTE: 1500-0179 ===
+2025-06-30 18:28:10,624 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:10,625 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:10,637 - INFO - ENCONTRADAS 30 NOTAS EN LA BASE DE DATOS
+2025-06-30 18:28:10,637 - INFO - Agregando nota 1: Promesa de pago generada para ...
+2025-06-30 18:28:10,637 - INFO - Nota 1 agregada al layout
+2025-06-30 18:28:10,637 - INFO - Agregando nota 2: Teléfono adicional actualizado...
+2025-06-30 18:28:10,638 - INFO - Nota 2 agregada al layout
+2025-06-30 18:28:10,638 - INFO - Agregando nota 3: Promesa de pago generada para ...
+2025-06-30 18:28:10,638 - INFO - Nota 3 agregada al layout
+2025-06-30 18:28:10,638 - INFO - Agregando nota 4: Promesa de pago generada para ...
+2025-06-30 18:28:10,639 - INFO - Nota 4 agregada al layout
+2025-06-30 18:28:10,639 - INFO - Agregando nota 5: Mandó a buzón de voz...
+2025-06-30 18:28:10,639 - INFO - Nota 5 agregada al layout
+2025-06-30 18:28:10,639 - INFO - Agregando nota 6: Se le notifico via whatsapp...
+2025-06-30 18:28:10,640 - INFO - Nota 6 agregada al layout
+2025-06-30 18:28:10,640 - INFO - Agregando nota 7: Mandó a buzón de voz...
+2025-06-30 18:28:10,640 - INFO - Nota 7 agregada al layout
+2025-06-30 18:28:10,640 - INFO - Agregando nota 8: SONO , PERO NO CONTESTO ....
+2025-06-30 18:28:10,641 - INFO - Nota 8 agregada al layout
+2025-06-30 18:28:10,641 - INFO - Agregando nota 9: SONO Y NO CONTESTO....
+2025-06-30 18:28:10,641 - INFO - Nota 9 agregada al layout
+2025-06-30 18:28:10,641 - INFO - Agregando nota 10: sono y no contesto ....
+2025-06-30 18:28:10,642 - INFO - Nota 10 agregada al layout
+2025-06-30 18:28:10,642 - INFO - Agregando nota 11: NO CONTESTO , MANDO A BUZON ....
+2025-06-30 18:28:10,642 - INFO - Nota 11 agregada al layout
+2025-06-30 18:28:10,642 - INFO - Agregando nota 12: Promesa de pago generada para ...
+2025-06-30 18:28:10,643 - INFO - Nota 12 agregada al layout
+2025-06-30 18:28:10,643 - INFO - Agregando nota 13: se le llamo al 7551713019  per...
+2025-06-30 18:28:10,643 - INFO - Nota 13 agregada al layout
+2025-06-30 18:28:10,643 - INFO - Agregando nota 14: envia a buzon se le notifico v...
+2025-06-30 18:28:10,643 - INFO - Nota 14 agregada al layout
+2025-06-30 18:28:10,643 - INFO - Agregando nota 15: Promesa de pago generada para ...
+2025-06-30 18:28:10,645 - INFO - Nota 15 agregada al layout
+2025-06-30 18:28:10,645 - INFO - Agregando nota 16: Mandó a buzón de voz...
+2025-06-30 18:28:10,646 - INFO - Nota 16 agregada al layout
+2025-06-30 18:28:10,646 - INFO - Agregando nota 17: Mandó a buzón de voz...
+2025-06-30 18:28:10,646 - INFO - Nota 17 agregada al layout
+2025-06-30 18:28:10,646 - INFO - Agregando nota 18: Mandó a buzón de voz...
+2025-06-30 18:28:10,646 - INFO - Nota 18 agregada al layout
+2025-06-30 18:28:10,647 - INFO - Agregando nota 19: Mandó a buzón de voz...
+2025-06-30 18:28:10,647 - INFO - Nota 19 agregada al layout
+2025-06-30 18:28:10,647 - INFO - Agregando nota 20: Mandó a buzón de voz...
+2025-06-30 18:28:10,647 - INFO - Nota 20 agregada al layout
+2025-06-30 18:28:10,647 - INFO - Agregando nota 21: Se le notifico via whatsapp...
+2025-06-30 18:28:10,648 - INFO - Nota 21 agregada al layout
+2025-06-30 18:28:10,648 - INFO - Agregando nota 22: Mandó a buzón de voz...
+2025-06-30 18:28:10,648 - INFO - Nota 22 agregada al layout
+2025-06-30 18:28:10,648 - INFO - Agregando nota 23: Mandó a buzón de voz...
+2025-06-30 18:28:10,649 - INFO - Nota 23 agregada al layout
+2025-06-30 18:28:10,649 - INFO - Agregando nota 24: contesto y despues colgo...
+2025-06-30 18:28:10,649 - INFO - Nota 24 agregada al layout
+2025-06-30 18:28:10,649 - INFO - Agregando nota 25: Promesa de pago generada para ...
+2025-06-30 18:28:10,650 - INFO - Nota 25 agregada al layout
+2025-06-30 18:28:10,650 - INFO - Agregando nota 26: Promesa de pago generada para ...
+2025-06-30 18:28:10,650 - INFO - Nota 26 agregada al layout
+2025-06-30 18:28:10,650 - INFO - Agregando nota 27: Promesa de pago generada para ...
+2025-06-30 18:28:10,651 - INFO - Nota 27 agregada al layout
+2025-06-30 18:28:10,651 - INFO - Agregando nota 28: P.P. pasa el dia 22 de enero...
+2025-06-30 18:28:10,651 - INFO - Nota 28 agregada al layout
+2025-06-30 18:28:10,651 - INFO - Agregando nota 29: Mandó a buzón de voz...
+2025-06-30 18:28:10,652 - INFO - Nota 29 agregada al layout
+2025-06-30 18:28:10,652 - INFO - Agregando nota 30: Mandó a buzón de voz...
+2025-06-30 18:28:10,652 - INFO - Nota 30 agregada al layout
+2025-06-30 18:28:10,653 - INFO - === CARGA COMPLETADA: 30 NOTAS MOSTRADAS ===
+2025-06-30 18:28:10,653 - INFO - Al final de __init__, notes_layout existe: True
+2025-06-30 18:28:10,653 - INFO - notes_layout es None: False
+2025-06-30 18:28:10,653 - INFO - notes_layout count: 31
+2025-06-30 18:28:11,232 - INFO - Cargando datos desde la base de datos...
+2025-06-30 18:28:11,232 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:11,254 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:11,254 - INFO - Ejecutando consulta SQL: 
+            SELECT 
+                Clave,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Nombre, '') as Nombre,
+                ISNULL(Direccion, '') as Direccion,
+                ISNULL(Telefono1, '') as Telefono1,
+                ISNULL(Telefono2, '') as Telefono2,
+                ISNULL(Telefono3, '') as Telefono3,  -- NUEVA LÍNEA
+                ISNULL(Descripcion, '') as Descripcion,
+                ISNULL(Email, '') as Email,
+                ISNULL(Referencia, '') as Referencia,
+                ISNULL(Obs, '') as Obs,
+                ISNULL(Credito, 0) as Credito,
+                ISNULL(MontoCredito, 0) as MontoCredito,
+                ISNULL(DiasCredito, 0) as DiasCredito,
+                ISNULL(InteresCredito, '') as InteresCredito,
+                ISNULL(Saldo, 0) as Saldo,
+                ISNULL(NL, 0) as NL,
+                ISNULL(NC, '') as NC,
+                ISNULL(Membresia, '') as Membresia,
+                ISNULL(Nivel, 0) as Nivel,
+                ISNULL(Modificado, '') as Modificado,
+                ISNULL(Et1, '') as Et1,
+                ISNULL(LineaDeCredito, '') as LineaDeCredito
+            FROM Clientes4
+            WHERE Saldo > 0
+        
+2025-06-30 18:28:11,259 - INFO - Registros encontrados: 86
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 21
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 1067
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 19
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 408
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 41
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 823
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 44
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 694
+2025-06-30 18:28:11,259 - WARNING - Valor de fecha no válido: 51
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 878
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 573
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 978
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 252
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 807
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 532
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 589
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 886
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 85
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 89
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 108
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 778
+2025-06-30 18:28:11,260 - WARNING - Valor de fecha no válido: 125
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 859
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 141
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 984
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 1113
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 761
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 798
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 165
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 181
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 191
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 187
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 216
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 231
+2025-06-30 18:28:11,261 - WARNING - Valor de fecha no válido: 217
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 745
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 720
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 337
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 801
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 351
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 743
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 443
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 1075
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 1140
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 1142
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 799
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 500
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 200
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 451
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 392
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 488
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 540
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 817
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 601
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 909
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 535
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 564
+2025-06-30 18:28:11,262 - WARNING - Valor de fecha no válido: 629
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 673
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 977
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1101
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 775
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 986
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 850
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 567
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1079
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 907
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 916
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 646
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 605
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 994
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1008
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1033
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1103
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1096
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1109
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1115
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1118
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1121
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1124
+2025-06-30 18:28:11,263 - WARNING - Valor de fecha no válido: 1130
+2025-06-30 18:28:11,265 - WARNING - Valor de fecha no válido: 1129
+2025-06-30 18:28:11,265 - WARNING - Valor de fecha no válido: 1135
+2025-06-30 18:28:11,265 - WARNING - Valor de fecha no válido: 1136
+2025-06-30 18:28:11,265 - WARNING - Valor de fecha no válido: 1137
+2025-06-30 18:28:11,265 - WARNING - Valor de fecha no válido: 1138
+2025-06-30 18:28:11,265 - INFO - Datos procesados exitosamente. Total de registros: 86
+2025-06-30 18:28:11,265 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:28:11,268 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:11,269 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:11,269 - INFO - Ejecutando consulta SQL para Ventas: 
+            SELECT 
+                Folio,
+                ISNULL(Estado, '') as Estado,
+                ISNULL(CveCte, '') as CveCte,
+                ISNULL(Cliente, '') as Cliente,
+                ISNULL(Fecha, '') as Fecha,
+                ISNULL(Hora, '') as Hora,
+                ISNULL(Total, 0) as Total,
+                ISNULL(Restante, 0) as Restante,
+                ISNULL(FechaPago, '') as FechaPago,
+                ISNULL(Paga, 0) as Paga,
+                ISNULL(Cambio, '') as Cambio,
+                ISNULL(Ticket, '') as Ticket,
+                ISNULL(Condiciones, '') as Condiciones,
+                ISNULL(FechaProg, '') as FechaProg,
+                ISNULL(Corte, 0) as Corte,
+                ISNULL(Vendedor, '') as Vendedor,
+                ISNULL(ComoPago, '') as ComoPago,
+                ISNULL(DiasCred, 0) as DiasCred,
+                ISNULL(IntCred, '') as IntCred,
+                ISNULL(Articulos, '') as Articulos,
+                ISNULL(BarCuenta, '') as BarCuenta,
+                ISNULL(BarMesero, '') as BarMesero,
+                ISNULL(NotasAdicionales, '') as NotasAdicionales,
+                ISNULL(IdBarCuenta, '') as IdBarCuenta,
+                ISNULL(Bitacora, '') as Bitacora,
+                ISNULL(Anticipo, 0) as Anticipo,
+                ISNULL(FolioPago, '') as FolioPago,
+                ISNULL(SaldoCliente, 0) as SaldoCliente,
+                ISNULL(Caja, 0) as Caja
+            FROM Ventas
+            WHERE Estado != 'PAGADA'
+            AND Estado != 'CANCELADA'
+            AND Estado IS NOT NULL
+            AND Restante > 0
+        
+2025-06-30 18:28:11,304 - INFO - Registros de Ventas encontrados: 160
+2025-06-30 18:28:11,307 - INFO - Datos de Ventas procesados exitosamente. Total de registros: 160
+2025-06-30 18:28:11,307 - INFO - Cerrando conexión a la base de datos
+2025-06-30 18:28:11,310 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:11,311 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:11,315 - INFO - Intentando conectar a la base de datos: 192.168.1.70\SQLEXPRESS/Ventus
+2025-06-30 18:28:11,316 - INFO - Conexión exitosa a la base de datos
+2025-06-30 18:28:11,321 - INFO - Datos cargados: 86 clientes, 160 ventas, 86 estados, 15 clientes en buró
+2025-06-30 18:28:11,322 - INFO - Totales calculados - Clientes: 202490.0, Empresas: 166120.0, Buró: 39395.0
+2025-06-30 18:28:11,322 - INFO - Totales actualizados - General: $408,005.00, Clientes: $202,490.00, Empresas: $166,120.00, Buró: $39,395.00

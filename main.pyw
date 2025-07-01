@@ -79,6 +79,8 @@ class CobranzaApp(QWidget):
         self.clients_buro = {}
         self.last_update_time = time.time()
         
+        self.data_loaded = False
+        
         self.initUI()
         self.load_data()
         self.setup_auto_update()
@@ -362,6 +364,16 @@ class CobranzaApp(QWidget):
         title_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(title_label)
+        
+        # Verificar si los datos están cargados
+        if not self.data_loaded or not self.clientes_data:
+            # Mostrar mensaje de carga
+            loading_label = QLabel("Cargando datos de clientes...")
+            loading_label.setFont(QFont("Arial", 14))
+            loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            loading_label.setStyleSheet("color: #666; margin: 50px;")
+            self.main_layout.addWidget(loading_label)
+            return
         
         # Grid para las 4 categorías
         categories_widget = QWidget()
@@ -870,11 +882,17 @@ class CobranzaApp(QWidget):
                         f"{len(self.client_states)} estados, "
                         f"{len(self.clients_buro)} clientes en buró")
             
+            # Marcar que los datos están cargados
+            self.data_loaded = True
+            
             # Actualizar información de deuda en el header
             self.update_debt_info()
             
             # Marcar tiempo de última actualización
             self.last_update_time = time.time()
+            
+            # ACTUALIZAR LA VISTA ACTUAL CON LOS NUEVOS DATOS
+            self.refresh_current_view()
                             
         except Exception as e:
             logging.error(f"Error al cargar datos: {e}")
@@ -883,6 +901,7 @@ class CobranzaApp(QWidget):
             self.ventas_data = {}
             self.client_states = {}
             self.clients_buro = {}
+            self.data_loaded = False
             
             # Mostrar error en el header
             self.amount_label.setText("Error al cargar")
@@ -909,6 +928,13 @@ class CobranzaApp(QWidget):
         except Exception as e:
             logging.error(f"Error al recargar datos: {e}")
             QMessageBox.critical(self, "Error", f"Error al recargar datos: {str(e)}")
+    
+    def refresh_current_view(self):
+        """Actualizar la vista actual después de cargar datos"""
+        if self.current_view == "buro":
+            self.create_buro_view()
+        else:
+            self.create_clientes_view()
     
     def update_debt_info(self):
         """Actualizar la información de deuda en el header"""
@@ -989,7 +1015,7 @@ def main():
         splash.update_status("Cargando sistema...")
         
         # Después de 2 segundos, mostrar el login
-        login_root.after(2000, lambda: [
+        login_root.after(1500, lambda: [
             splash.stop_progress(),
             splash.show_login()
         ])
@@ -1004,39 +1030,141 @@ def main():
         # Destruir ventana de login
         login_root.destroy()
         
+        # *** NUEVO: CONFIGURAR ID DE LA APLICACIÓN PARA WINDOWS ***
+        try:
+            # Establecer un ID único para la aplicación en Windows
+            # Esto es CRÍTICO para que Windows reconozca la aplicación como única
+            myappid = 'garcia.cobranza.sistema.v1'
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            logging.info("ID de aplicación establecido para Windows")
+        except Exception as e:
+            logging.warning(f"No se pudo establecer ID de aplicación Windows: {e}")
+        
         # SEGUNDO: Crear la aplicación PyQt6
         app = QApplication(sys.argv)
         
-        # CONFIGURAR ÍCONO DE LA APLICACIÓN (para toda la app y barra de tareas)
+        # *** MEJORADO: CONFIGURAR ÍCONO DE LA APLICACIÓN ***
         try:
-            # Probar con diferentes formatos por si uno no funciona
+            # Buscar archivos de ícono disponibles
             icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+            app_icon = None
             
             for icon_file in icon_files:
                 if os.path.exists(icon_file):
-                    app_icon = QIcon(icon_file)
-                    
-                    # Establecer ícono para TODA la aplicación
-                    app.setWindowIcon(app_icon)
-                    QApplication.setWindowIcon(app_icon)
-                    
-                    logging.info(f"Ícono establecido: {icon_file}")
-                    break
+                    # Verificar que el archivo existe y no está vacío
+                    file_size = os.path.getsize(icon_file)
+                    if file_size > 0:
+                        app_icon = QIcon(icon_file)
+                        
+                        # Verificar que el ícono se cargó correctamente
+                        if not app_icon.isNull():
+                            # ESTABLECER PARA TODA LA APLICACIÓN
+                            app.setWindowIcon(app_icon)
+                            QApplication.setWindowIcon(app_icon)
+                            
+                            # ESTABLECER METADATOS DE LA APLICACIÓN
+                            app.setApplicationDisplayName("Sistema de Cobranza")
+                            app.setApplicationName("Cobranza")
+                            app.setApplicationVersion("v1.0")
+                            app.setOrganizationName("Garcia")
+                            app.setOrganizationDomain("garcia.com")
+                            
+                            logging.info(f"Ícono establecido correctamente: {icon_file}")
+                            break
+                        else:
+                            logging.warning(f"El ícono {icon_file} no se pudo cargar")
+                    else:
+                        logging.warning(f"El archivo {icon_file} está vacío")
             else:
-                logging.warning("No se encontró ningún archivo de ícono")
+                logging.warning("No se encontró ningún archivo de ícono válido")
                 
         except Exception as e:
             logging.error(f"Error al establecer ícono: {e}")
         
-        # Crear y mostrar la aplicación principal
+        # Crear la aplicación principal
         cobranza = CobranzaApp()
+        
+        # *** NUEVO: ESTABLECER ÍCONO EN LA VENTANA PRINCIPAL TAMBIÉN ***
+        if app_icon:
+            cobranza.setWindowIcon(app_icon)
+            # Almacenar referencia para evitar garbage collection
+            cobranza.app_icon = app_icon
+        
+        # *** MEJORADO: MOSTRAR CON CONFIGURACIÓN ESPECIAL PARA BARRA DE TAREAS ***
         cobranza.show()
+        
+        # *** NUEVO: CONFIGURACIÓN ADICIONAL PARA WINDOWS ***
+        if sys.platform == "win32":
+            try:
+                # Obtener handle de la ventana
+                hwnd = int(cobranza.winId())
+                
+                # Cargar y establecer íconos específicos para barra de tareas
+                for icon_file in icon_files:
+                    if os.path.exists(icon_file):
+                        # Ícono pequeño para barra de tareas (16x16)
+                        hicon_small = ctypes.windll.user32.LoadImageW(
+                            0, icon_file, 1, 16, 16, 0x00000010 | 0x00000040
+                        )
+                        
+                        # Ícono grande para Alt+Tab (32x32)
+                        hicon_large = ctypes.windll.user32.LoadImageW(
+                            0, icon_file, 1, 32, 32, 0x00000010 | 0x00000040
+                        )
+                        
+                        if hicon_small and hicon_large:
+                            # Establecer íconos usando Windows API
+                            ctypes.windll.user32.SendMessageW(
+                                hwnd, 0x0080, 0, hicon_small  # WM_SETICON, ICON_SMALL
+                            )
+                            ctypes.windll.user32.SendMessageW(
+                                hwnd, 0x0080, 1, hicon_large  # WM_SETICON, ICON_BIG
+                            )
+                            
+                            logging.info(f"Íconos de barra de tareas establecidos correctamente")
+                            break
+                
+            except Exception as e:
+                logging.warning(f"No se pudo configurar ícono de barra de tareas: {e}")
         
         sys.exit(app.exec())
         
     except Exception as e:
         with open("error_log.txt", "w", encoding="utf-8") as f:
             f.write(f"Error al iniciar la aplicación:\n{str(e)}")
+
+def setup_window_icon(self):
+    """Configurar ícono de la ventana de manera robusta"""
+    try:
+        # Buscar archivos de ícono disponibles
+        icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+        
+        for icon_file in icon_files:
+            if os.path.exists(icon_file):
+                # Verificar que el archivo no esté corrupto
+                file_size = os.path.getsize(icon_file)
+                if file_size > 0:
+                    window_icon = QIcon(icon_file)
+                    
+                    # Verificar que el ícono se cargó correctamente
+                    if not window_icon.isNull():
+                        self.setWindowIcon(window_icon)
+                        
+                        # ALMACENAR REFERENCIA AL ÍCONO PARA EVITAR GARBAGE COLLECTION
+                        self.app_icon = window_icon
+                        
+                        logging.info(f"Ícono de ventana establecido correctamente: {icon_file}")
+                        return True
+                    else:
+                        logging.warning(f"El ícono {icon_file} no se pudo cargar correctamente")
+                else:
+                    logging.warning(f"El archivo {icon_file} está vacío")
+        
+        logging.warning("No se encontró ningún archivo de ícono válido para la ventana")
+        return False
+        
+    except Exception as e:
+        logging.error(f"Error al establecer ícono de ventana: {e}")
 
 if __name__ == "__main__":
     main()
