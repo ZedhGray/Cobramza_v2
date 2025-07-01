@@ -40,7 +40,7 @@ try:
 except ImportError:
     UpdaterDialog = None
 
-version = "v2.1"
+version = "v2.2"
 
 class CobranzaApp(QWidget):
     def __init__(self):
@@ -1061,7 +1061,6 @@ class CobranzaApp(QWidget):
             QMessageBox.critical(self, "Error", f"Error al abrir detalles del cliente: {str(e)}")
     
     def actualizar_app(self):
-        """Abre el actualizador"""
         if UpdaterDialog is None:
             QMessageBox.warning(self, "Error", "Módulo de actualización no disponible")
             return
@@ -1071,8 +1070,12 @@ class CobranzaApp(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         
         if reply == QMessageBox.StandardButton.Yes:
-            updater = UpdaterDialog(self)
-            updater.exec()
+            # Lanzar actualizador como proceso separado
+            import subprocess
+            subprocess.Popen([sys.executable, "updater_pyqt_ssh.py"])
+            # Cerrar la app principal
+            self.close()
+            QApplication.quit()
 
 def main():
     try:

@@ -7,7 +7,7 @@ REPO_NAME = "Cobramza_v2"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/deploy_key_cobranza")
 
 # CONFIGURACIÓN DE LA APLICACIÓN
-MAIN_APP_FILE = "main.py"
+MAIN_APP_FILE = "main.pyw"
 MAIN_APP_ALT = "main.pyw"
 
 # ARCHIVOS A IGNORAR
