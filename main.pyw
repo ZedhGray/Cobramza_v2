@@ -40,7 +40,7 @@ try:
 except ImportError:
     UpdaterDialog = None
 
-version = "v2.4"
+version = "v2.2"
 
 class CobranzaApp(QWidget):
     def __init__(self):
