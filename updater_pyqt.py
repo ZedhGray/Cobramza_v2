@@ -295,12 +295,6 @@ class UpdateWorker(QThread):
             
         except Exception as e:
             self.logger.error(f"Error al reiniciar: {str(e)}")
-            self.detail_added.emit(f"❌ Error al reiniciar: {str(e)}")_app])
-            
-            self.detail_added.emit("✅ Aplicación reiniciada correctamente")
-            
-        except Exception as e:
-            self.logger.error(f"Error al reiniciar: {str(e)}")
             self.detail_added.emit(f"❌ Error al reiniciar: {str(e)}")
 
 
