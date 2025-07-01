@@ -217,11 +217,12 @@ class ClienteDetalleWindow(QWidget):
         title_label.setProperty("class", "title")
         timeline_layout.addWidget(title_label)
         
-        # Botón de recarga para debugging
-        reload_btn = QPushButton("🔄 Recargar Notas")
-        reload_btn.clicked.connect(self.load_client_notes)
-        reload_btn.setMaximumWidth(150)
-        timeline_layout.addWidget(reload_btn)
+        # COMENTAMOS EL BOTÓN DE RECARGA (pero mantenemos la función)
+        # reload_btn = QPushButton("🔄 Recargar Notas")
+        # reload_btn.clicked.connect(self.load_client_notes)
+        # reload_btn.setMaximumWidth(150)
+        # timeline_layout.addWidget(reload_btn)
+    
         
         # Área de scroll para las notas
         scroll_area = QScrollArea()
@@ -1102,25 +1103,218 @@ class TelefonoDialog(QDialog):
         return self.phone_edit.text().strip()
 
 
+# REEMPLAZA TODA LA CLASE CalendarDialog:
+
 class CalendarDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Seleccionar Fecha de Promesa")
-        self.setFixedSize(350, 400)
+        self.setFixedSize(400, 480)
+        
+        # Centrar respecto al padre
+        if parent:
+            parent_geo = parent.geometry()
+            x = parent_geo.x() + (parent_geo.width() - 400) // 2
+            y = parent_geo.y() + (parent_geo.height() - 480) // 2
+            self.move(x, y)
+        
+        # APLICAR ESTILO FORZADO PARA TODA LA VENTANA
+        self.setStyleSheet("""
+            QDialog {
+                background-color: white;
+                color: black;
+            }
+            
+            QLabel {
+                color: black;
+                background-color: transparent;
+            }
+            
+            QComboBox {
+                background-color: white;
+                color: black;
+                border: 2px solid #ddd;
+                padding: 8px;
+                border-radius: 4px;
+                font-size: 11px;
+            }
+            
+            QComboBox:hover {
+                border-color: #E31837;
+            }
+            
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border: none;
+            }
+            
+            QComboBox::down-arrow {
+                image: none;
+                border: none;
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid black;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #ddd;
+                selection-background-color: #E31837;
+                selection-color: white;
+            }
+            
+            QPushButton {
+                background-color: white;
+                color: black;
+                border: 2px solid #ddd;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            
+            QPushButton:hover {
+                background-color: #f5f5f5;
+                border-color: #999;
+            }
+            
+            QPushButton[class="danger"] {
+                background-color: #E31837;
+                color: white;
+                border-color: #E31837;
+            }
+            
+            QPushButton[class="danger"]:hover {
+                background-color: #C41230;
+                border-color: #C41230;
+            }
+        """)
         
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # Título
-        layout.addWidget(QLabel("Seleccione la fecha de promesa:"))
+        title_label = QLabel("📅 Seleccione la fecha de promesa:")
+        title_label.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
         
-        # Calendario
+        # Calendario con estilos MEGA FORZADOS
         self.calendar = QCalendarWidget()
         self.calendar.setMinimumDate(QDate.currentDate())
+        self.calendar.setMinimumSize(350, 280)
+        
+        # ESTILOS SÚPER ESPECÍFICOS PARA EL CALENDARIO
+        calendar_style = """
+            QCalendarWidget {
+                background-color: white !important;
+                color: black !important;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+            }
+            
+            /* Header con año y mes */
+            QCalendarWidget QWidget#qt_calendar_navigationbar {
+                background-color: #f8f9fa !important;
+                color: black !important;
+            }
+            
+            /* Botones de navegación */
+            QCalendarWidget QToolButton {
+                background-color: white !important;
+                color: black !important;
+                border: 1px solid #ddd;
+                padding: 6px;
+                margin: 2px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            
+            QCalendarWidget QToolButton:hover {
+                background-color: #E31837 !important;
+                color: white !important;
+            }
+            
+            /* SpinBox para año */
+            QCalendarWidget QSpinBox {
+                background-color: white !important;
+                color: black !important;
+                border: 1px solid #ddd;
+                padding: 4px;
+                border-radius: 3px;
+            }
+            
+            /* Tabla de días */
+            QCalendarWidget QTableView {
+                background-color: white !important;
+                color: black !important;
+                gridline-color: #e0e0e0 !important;
+                selection-background-color: #E31837 !important;
+                selection-color: white !important;
+            }
+            
+            /* Header de días de la semana */
+            QCalendarWidget QHeaderView::section {
+                background-color: #f1f3f4 !important;
+                color: black !important;
+                border: 1px solid #e0e0e0;
+                padding: 8px;
+                font-weight: bold;
+            }
+            
+            /* Días del mes */
+            QCalendarWidget QAbstractItemView:enabled {
+                color: black !important;
+                background-color: white !important;
+            }
+            
+            QCalendarWidget QAbstractItemView::item {
+                color: black !important;
+                background-color: white !important;
+                padding: 8px;
+            }
+            
+            QCalendarWidget QAbstractItemView::item:hover {
+                background-color: #ffebee !important;
+                color: black !important;
+            }
+            
+            QCalendarWidget QAbstractItemView::item:selected {
+                background-color: #E31837 !important;
+                color: white !important;
+                font-weight: bold;
+            }
+            
+            /* Días de otros meses */
+            QCalendarWidget QAbstractItemView::item:disabled {
+                color: #999 !important;
+                background-color: #f9f9f9 !important;
+            }
+        """
+        
+        self.calendar.setStyleSheet(calendar_style)
         layout.addWidget(self.calendar)
         
-        # Método de pago
+        # Separador visual
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setStyleSheet("background-color: #ddd; max-height: 1px;")
+        layout.addWidget(separator)
+        
+        # Método de pago con mejor diseño
+        payment_frame = QFrame()
         payment_layout = QHBoxLayout()
-        payment_layout.addWidget(QLabel("Método de pago:"))
+        payment_layout.setSpacing(10)
+        
+        payment_label = QLabel("💳 Método de pago:")
+        payment_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        payment_layout.addWidget(payment_label)
         
         self.payment_combo = QComboBox()
         self.payment_combo.addItems([
@@ -1129,17 +1323,20 @@ class CalendarDialog(QDialog):
         ])
         payment_layout.addWidget(self.payment_combo)
         
-        layout.addLayout(payment_layout)
+        payment_frame.setLayout(payment_layout)
+        layout.addWidget(payment_frame)
         
-        # Botones
+        # Botones con mejor espaciado
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
         
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton("❌ Cancelar")
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("Guardar")
-        save_btn.clicked.connect(self.accept)
+        save_btn = QPushButton("✅ Guardar")
         save_btn.setProperty("class", "danger")
+        save_btn.clicked.connect(self.accept)
+        save_btn.setDefault(True)
         
         button_layout.addWidget(cancel_btn)
         button_layout.addWidget(save_btn)
@@ -1147,12 +1344,14 @@ class CalendarDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
         
+        # Establecer foco en el calendario
+        self.calendar.setFocus()
+    
     def get_selection(self):
         qdate = self.calendar.selectedDate()
         python_date = date(qdate.year(), qdate.month(), qdate.day())
         payment_method = self.payment_combo.currentText()
         return python_date, payment_method
-
 
 class TicketDetailDialog(QDialog):
     def __init__(self, parent, ticket_data):
