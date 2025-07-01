@@ -9,17 +9,17 @@ Personaliza estos valores según tu repositorio y configuración
 # =============================================================================
 
 # Tu usuario de GitHub
-GITHUB_USER = "TuUsuarioGitHub"
+GITHUB_USER = "GarciaCompany"
 
 # Token de acceso personal de GitHub
 # Para generar un token:
 # 1. Ve a GitHub > Settings > Developer settings > Personal access tokens
 # 2. Genera un nuevo token con permisos de "repo"
 # 3. Copia el token aquí
-GITHUB_TOKEN = "ghp_TuTokenAqui"
+GITHUB_TOKEN = "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"
 
 # Nombre del repositorio
-REPO_NAME = "TuRepositorio"
+REPO_NAME = "Cobramza_v2"
 
 # URL completa del repositorio
 REPO_URL = f"https://{GITHUB_USER}:{GITHUB_TOKEN}@github.com/{GITHUB_USER}/{REPO_NAME}.git"
@@ -89,7 +89,7 @@ IGNORE_FILES = [
 # =============================================================================
 
 # Número de WhatsApp para soporte (incluye código de país)
-WHATSAPP_SUPPORT = "5217551234567"  # Cambia por tu número real
+WHATSAPP_SUPPORT = "5217551285755"  # Cambia por tu número real
 
 # Mensaje predeterminado para WhatsApp
 WHATSAPP_MESSAGE = "Hola, necesito ayuda con el Sistema de Cobranza"
