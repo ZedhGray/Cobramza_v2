@@ -4,7 +4,7 @@ import os
 # CONFIGURACIÓN DE GITHUB CON SSH
 GITHUB_USER = "GarciaCompany"
 REPO_NAME = "Cobramza_v2"
-SSH_KEY_PATH = os.path.expanduser("~/.ssh/deploy_key_cobranza")
+SSH_KEY_PATH = r"C:\Users\Garcia Desing\.ssh\deploy_key_cobranza"
 
 # CONFIGURACIÓN DE LA APLICACIÓN
 MAIN_APP_FILE = "main.pyw"
