@@ -1,4 +1,5 @@
 # cliente_detalle.py
+import os
 import sys
 import logging
 import webbrowser
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                             QFormLayout, QLineEdit, QComboBox, QCalendarWidget,
                             QMessageBox, QSplitter, QGridLayout)
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QFont, QColor, QIcon
 
 # Importar funciones de database
 from database import (get_db_connection, get_client_notes, update_promise_date, 
@@ -22,7 +23,23 @@ class ClienteDetalleWindow(QWidget):
         self.client_data = client_data
         self.client_id = client_id
         
-        # Colores corporativos
+        # ESTABLECER ÍCONO PARA LA VENTANA DE DETALLES TAMBIÉN
+        try:
+            icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+            
+            for icon_file in icon_files:
+                if os.path.exists(icon_file):
+                    detail_icon = QIcon(icon_file)
+                    self.setWindowIcon(detail_icon)
+                    logging.info(f"Ícono de ventana de detalles establecido: {icon_file}")
+                    break
+            else:
+                logging.warning("No se encontró archivo de ícono para ventana de detalles")
+                
+        except Exception as e:
+            logging.error(f"Error al establecer ícono de ventana de detalles: {e}")
+        
+        # Colores corporativos (resto del código igual...)
         self.COLOR_ROJO = "#E31837"
         self.COLOR_NEGRO = "#333333"
         self.COLOR_BLANCO = "#FFFFFF"
@@ -1103,13 +1120,80 @@ class TelefonoDialog(QDialog):
         return self.phone_edit.text().strip()
 
 
-# REEMPLAZA TODA LA CLASE CalendarDialog:
+class TicketDetailDialog(QDialog):
+    def __init__(self, parent, ticket_data):
+        super().__init__(parent)
+        self.setWindowTitle(f"Ticket #{ticket_data['ticket']}")
+        self.setFixedSize(450, 600)
+        
+        layout = QVBoxLayout()
+        
+        # Área de scroll para el contenido del ticket
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        
+        # Widget contenedor
+        content_widget = QWidget()
+        content_layout = QVBoxLayout()
+        
+        # Procesar y mostrar el contenido del ticket
+        lines = ticket_data['datos'].split('\r\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Crear etiqueta para cada línea
+            line_label = QLabel(line)
+            line_label.setFont(QFont("Courier", 9))
+            line_label.setWordWrap(True)
+            
+            # Estilos especiales para diferentes tipos de líneas
+            if "GARCIA RINES" in line:
+                line_label.setFont(QFont("Courier", 11, QFont.Weight.Bold))
+                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            elif line.startswith("TICKET:") or line.startswith("CLIENTE:"):
+                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+            elif "CANT" in line and "DESCRIPCION" in line:
+                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+            elif "ARTICULOS" in line or "IMPORTE:" in line or "ADEUDA:" in line:
+                line_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+            elif "DEBO Y PAGARE" in line or "ACEPTO" in line:
+                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+            
+            content_layout.addWidget(line_label)
+        
+        content_widget.setLayout(content_layout)
+        scroll_area.setWidget(content_widget)
+        
+        layout.addWidget(scroll_area)
+        
+        # Botón cerrar
+        close_btn = QPushButton("Cerrar")
+        close_btn.clicked.connect(self.accept)
+        close_btn.setProperty("class", "danger")
+        layout.addWidget(close_btn)
+        
+        self.setLayout(layout)
 
 class CalendarDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Seleccionar Fecha de Promesa")
         self.setFixedSize(400, 480)
+        
+        # ESTABLECER ÍCONO PARA EL DIÁLOGO TAMBIÉN
+        try:
+            icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+            for icon_file in icon_files:
+                if os.path.exists(icon_file):
+                    self.setWindowIcon(QIcon(icon_file))
+                    break
+        except Exception as e:
+            logging.error(f"Error al establecer ícono de diálogo: {e}")
         
         # Centrar respecto al padre
         if parent:
@@ -1352,62 +1436,3 @@ class CalendarDialog(QDialog):
         python_date = date(qdate.year(), qdate.month(), qdate.day())
         payment_method = self.payment_combo.currentText()
         return python_date, payment_method
-
-class TicketDetailDialog(QDialog):
-    def __init__(self, parent, ticket_data):
-        super().__init__(parent)
-        self.setWindowTitle(f"Ticket #{ticket_data['ticket']}")
-        self.setFixedSize(450, 600)
-        
-        layout = QVBoxLayout()
-        
-        # Área de scroll para el contenido del ticket
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        
-        # Widget contenedor
-        content_widget = QWidget()
-        content_layout = QVBoxLayout()
-        
-        # Procesar y mostrar el contenido del ticket
-        lines = ticket_data['datos'].split('\r\n')
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Crear etiqueta para cada línea
-            line_label = QLabel(line)
-            line_label.setFont(QFont("Courier", 9))
-            line_label.setWordWrap(True)
-            
-            # Estilos especiales para diferentes tipos de líneas
-            if "GARCIA RINES" in line:
-                line_label.setFont(QFont("Courier", 11, QFont.Weight.Bold))
-                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            elif line.startswith("TICKET:") or line.startswith("CLIENTE:"):
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
-            elif "CANT" in line and "DESCRIPCION" in line:
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
-            elif "ARTICULOS" in line or "IMPORTE:" in line or "ADEUDA:" in line:
-                line_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
-            elif "DEBO Y PAGARE" in line or "ACEPTO" in line:
-                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
-            
-            content_layout.addWidget(line_label)
-        
-        content_widget.setLayout(content_layout)
-        scroll_area.setWidget(content_widget)
-        
-        layout.addWidget(scroll_area)
-        
-        # Botón cerrar
-        close_btn = QPushButton("Cerrar")
-        close_btn.clicked.connect(self.accept)
-        close_btn.setProperty("class", "danger")
-        layout.addWidget(close_btn)
-        
-        self.setLayout(layout)

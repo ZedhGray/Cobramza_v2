@@ -40,13 +40,23 @@ version = "v1.0"
 class CobranzaApp(QWidget):
     def __init__(self):
         super().__init__()
-        # Establecer el ícono de la aplicación
+        
+        # ESTABLECER ÍCONO ESPECÍFICAMENTE PARA ESTA VENTANA
         try:
-            icon = QIcon("lga.ico")
-            self.setWindowIcon(icon)
-            QApplication.setWindowIcon(icon)
-        except:
-            pass
+            # Buscar archivos de ícono disponibles
+            icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+            
+            for icon_file in icon_files:
+                if os.path.exists(icon_file):
+                    window_icon = QIcon(icon_file)
+                    self.setWindowIcon(window_icon)
+                    logging.info(f"Ícono de ventana establecido: {icon_file}")
+                    break
+            else:
+                logging.warning("No se encontró archivo de ícono para la ventana")
+                
+        except Exception as e:
+            logging.error(f"Error al establecer ícono de ventana: {e}")
         
         # Colores corporativos
         self.COLOR_ROJO = "#E31837"
@@ -971,6 +981,7 @@ def main():
         # PRIMERO: Crear el sistema de login con Tkinter
         import tkinter as tk
         login_root = tk.Tk()
+        login_root.iconbitmap('lga2.ico')  # Ícono para el login también
         splash = LoadingSplash(login_root)
         
         # Simular carga de datos
@@ -996,12 +1007,26 @@ def main():
         # SEGUNDO: Crear la aplicación PyQt6
         app = QApplication(sys.argv)
         
-        # Establecer el icono de la aplicación
+        # CONFIGURAR ÍCONO DE LA APLICACIÓN (para toda la app y barra de tareas)
         try:
-            app_icon = QIcon("lga.ico")
-            app.setWindowIcon(app_icon)
-        except:
-            pass
+            # Probar con diferentes formatos por si uno no funciona
+            icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
+            
+            for icon_file in icon_files:
+                if os.path.exists(icon_file):
+                    app_icon = QIcon(icon_file)
+                    
+                    # Establecer ícono para TODA la aplicación
+                    app.setWindowIcon(app_icon)
+                    QApplication.setWindowIcon(app_icon)
+                    
+                    logging.info(f"Ícono establecido: {icon_file}")
+                    break
+            else:
+                logging.warning("No se encontró ningún archivo de ícono")
+                
+        except Exception as e:
+            logging.error(f"Error al establecer ícono: {e}")
         
         # Crear y mostrar la aplicación principal
         cobranza = CobranzaApp()
