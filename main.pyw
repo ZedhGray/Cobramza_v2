@@ -36,11 +36,11 @@ logging.basicConfig(
 )
 
 try:
-    from updater_pyqt import UpdaterDialog
+    from updater_pyqt_ssh import UpdaterDialog
 except ImportError:
     UpdaterDialog = None
 
-version = "v1.0"
+version = "v2.1"
 
 class CobranzaApp(QWidget):
     def __init__(self):
