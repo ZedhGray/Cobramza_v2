@@ -2,7 +2,7 @@
 import os
 
 # CONFIGURACIÓN DE GITHUB CON SSH
-GITHUB_USER = "GarciaCompany"
+GITHUB_USER = "ZedhGray"
 REPO_NAME = "Cobramza_v2"
 SSH_KEY_PATH = r"C:\Users\Garcia Desing\.ssh\deploy_key_cobranza"
 
