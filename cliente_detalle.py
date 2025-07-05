@@ -8,13 +8,80 @@ from datetime import datetime, date
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QFrame, QScrollArea, QTextEdit, QDialog, 
                             QFormLayout, QLineEdit, QComboBox, QCalendarWidget,
-                            QMessageBox, QSplitter, QGridLayout)
+                            QMessageBox, QSplitter, QGridLayout, QGraphicsDropShadowEffect)
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
-from PyQt6.QtGui import QFont, QColor, QIcon
+from PyQt6.QtGui import QFont, QColor, QIcon, QPainter, QPainterPath, QLinearGradient
 
 # Importar funciones de database
 from database import (get_db_connection, get_client_notes, update_promise_date, 
                      update_telefono3, format_phone_number, UserSession)
+
+class ModernCard(QFrame):
+    """Tarjeta moderna con efectos de glassmorphism para cliente detalle"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFrameStyle(QFrame.Shape.NoFrame)
+        
+        # Aplicar sombra
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(25)
+        shadow.setColor(QColor(0, 0, 0, 50))
+        shadow.setOffset(0, 5)
+        self.setGraphicsEffect(shadow)
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Crear gradiente de fondo glassmorphism
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0, QColor(255, 255, 255, 30))
+        gradient.setColorAt(1, QColor(255, 255, 255, 20))
+        
+        # Dibujar fondo con bordes redondeados
+        painter.setBrush(gradient)
+        painter.setPen(QColor(255, 255, 255, 60))
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, self.width(), self.height(), 16, 16)
+        painter.drawPath(path)
+
+class ModernButton(QPushButton):
+    """Botón moderno con efectos de glassmorphism"""
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setFixedHeight(40)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Crear gradiente de fondo
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        if self.property("class") == "danger":
+            gradient.setColorAt(0, QColor(239, 68, 68, 200))
+            gradient.setColorAt(1, QColor(220, 38, 38, 180))
+        elif self.isChecked():
+            gradient.setColorAt(0, QColor(255, 255, 255, 25))
+            gradient.setColorAt(1, QColor(255, 255, 255, 15))
+        else:
+            gradient.setColorAt(0, QColor(255, 255, 255, 10))
+            gradient.setColorAt(1, QColor(255, 255, 255, 5))
+        
+        # Dibujar fondo con bordes redondeados
+        painter.setBrush(gradient)
+        painter.setPen(QColor(255, 255, 255, 30))
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, self.width(), self.height(), 10, 10)
+        painter.drawPath(path)
+        
+        # Dibujar texto
+        if self.property("class") == "danger":
+            painter.setPen(QColor(255, 255, 255, 240))
+        else:
+            painter.setPen(QColor(255, 255, 255, 230) if self.isChecked() else QColor(255, 255, 255, 180))
+        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
 
 class ClienteDetalleWindow(QWidget):
     def __init__(self, parent, client_data, client_id):
@@ -39,14 +106,17 @@ class ClienteDetalleWindow(QWidget):
         except Exception as e:
             logging.error(f"Error al establecer ícono de ventana de detalles: {e}")
         
-        # Colores corporativos (resto del código igual...)
-        self.COLOR_ROJO = "#E31837"
-        self.COLOR_NEGRO = "#333333"
-        self.COLOR_BLANCO = "#FFFFFF"
-        self.COLOR_GRIS = "#F5F5F5"
-        self.COLOR_GRIS_CLARO = "#EFEFEF"
-        self.COLOR_ROJO_HOVER = "#C41230"
-        self.COLOR_GRIS_HOVER = "#E8E8E8"
+        # Paleta de colores moderna - SIGUIENDO EL ESTILO DE MAIN
+        self.DARK_BG = "#0a0a0a"          # Fondo principal oscuro
+        self.CARD_BG = "#16213e"          # Fondo de tarjetas
+        self.ACCENT_BLUE = "#0f3460"      # Azul oscuro para acentos
+        self.BRIGHT_CYAN = "#00b4d8"      # Cian brillante
+        self.TEXT_PRIMARY = "#ffffff"      # Texto principal
+        self.TEXT_SECONDARY = "#a0a0a0"   # Texto secundario
+        self.SUCCESS_GREEN = "#4ade80"    # Verde éxito
+        self.WARNING_ORANGE = "#fb923c"   # Naranja advertencia
+        self.DANGER_RED = "#ef4444"       # Rojo peligro
+        self.PROMISE_PURPLE = "#a855f7"   # Morado para promesas
         
         # PRIMERO crear la UI
         self.initUI()
@@ -61,12 +131,12 @@ class ClienteDetalleWindow(QWidget):
             logging.info(f"notes_layout count: {self.notes_layout.count()}")
         
     def initUI(self):
-        """Inicializa la interfaz de usuario"""
+        """Inicializa la interfaz de usuario con estilo glassmorphism"""
         self.setWindowTitle(f"Detalle Cliente - {self.client_data.get('nombre', 'Sin nombre')}")
         
         # Centrar la ventana correctamente
-        window_width = 1200
-        window_height = 800
+        window_width = 1600
+        window_height = 1000
         screen = self.screen()
         screen_width = screen.availableGeometry().width()
         screen_height = screen.availableGeometry().height()
@@ -75,76 +145,166 @@ class ClienteDetalleWindow(QWidget):
         y = (screen_height - window_height) // 2
         
         self.setGeometry(x, y, window_width, window_height)
-        self.setFixedSize(window_width, window_height)  # Fijar el tamaño
+        self.setFixedSize(window_width, window_height)
         
-        # Aplicar estilos CSS
+        # Aplicar estilo glassmorphism moderno - SIGUIENDO MAIN
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {self.COLOR_BLANCO};
-                color: {self.COLOR_NEGRO};
-                font-family: Arial;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {self.DARK_BG}, stop:0.3 #1a1a2e, 
+                    stop:0.7 #16213e, stop:1 {self.DARK_BG});
+                color: {self.TEXT_PRIMARY};
+                font-family: 'Segoe UI', Arial, sans-serif;
             }}
             
-            QFrame[frameShape="4"] {{
-                background-color: {self.COLOR_GRIS};
-                border: none;
-                max-height: 1px;
-            }}
-            
-            QPushButton {{
-                background-color: {self.COLOR_BLANCO};
-                color: {self.COLOR_NEGRO};
-                border: 1px solid {self.COLOR_GRIS};
-                padding: 8px 15px;
-                border-radius: 4px;
-                font-weight: bold;
-            }}
-            
-            QPushButton:hover {{
-                background-color: {self.COLOR_GRIS_HOVER};
-            }}
-            
-            QPushButton.danger {{
-                background-color: {self.COLOR_ROJO};
-                color: white;
-                border: 1px solid {self.COLOR_ROJO};
-            }}
-            
-            QPushButton.danger:hover {{
-                background-color: {self.COLOR_ROJO_HOVER};
+            QLabel {{
+                background: transparent;
+                color: {self.TEXT_PRIMARY};
             }}
             
             QLabel.title {{
                 font-size: 16px;
                 font-weight: bold;
-                color: {self.COLOR_NEGRO};
+                color: {self.BRIGHT_CYAN};
                 padding: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }}
             
             QLabel.field-label {{
-                font-weight: bold;
-                color: {self.COLOR_NEGRO};
+                font-weight: 600;
+                color: {self.TEXT_SECONDARY};
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
             
-            QFrame.section {{
-                border: 2px solid {self.COLOR_GRIS};
-                border-radius: 8px;
-                background-color: {self.COLOR_BLANCO};
-                margin: 5px;
+            QLabel.field-value {{
+                color: {self.TEXT_PRIMARY};
+                font-size: 12px;
+                font-weight: 500;
+                padding: 2px 0;
             }}
             
-            QFrame.note-frame {{
-                background-color: {self.COLOR_GRIS_CLARO};
-                border: 1px solid {self.COLOR_GRIS};
+            QScrollArea {{
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                backdrop-filter: blur(10px);
+            }}
+            
+            QScrollArea QWidget {{
+                background: transparent;
+            }}
+            
+            QScrollBar:vertical {{
+                background: rgba(255, 255, 255, 0.05);
+                width: 8px;
                 border-radius: 4px;
+                margin: 0;
+            }}
+            
+            QScrollBar::handle:vertical {{
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            
+            QScrollBar::handle:vertical:hover {{
+                background: rgba(255, 255, 255, 0.3);
+            }}
+            
+            QTextEdit {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: {self.TEXT_PRIMARY};
                 padding: 8px;
-                margin: 5px;
+                font-size: 11px;
+                selection-background-color: {self.BRIGHT_CYAN};
+            }}
+            
+            QLineEdit {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: {self.TEXT_PRIMARY};
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: {self.BRIGHT_CYAN};
+            }}
+            
+            QLineEdit:focus, QTextEdit:focus {{
+                border: 2px solid {self.BRIGHT_CYAN};
+                background: rgba(255, 255, 255, 0.12);
+            }}
+            
+            QComboBox {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: {self.TEXT_PRIMARY};
+                padding: 8px;
+                font-size: 11px;
+            }}
+            
+            QComboBox:hover {{
+                border-color: {self.BRIGHT_CYAN};
+                background: rgba(255, 255, 255, 0.12);
+            }}
+            
+            QComboBox::drop-down {{
+                border: none;
+                background: transparent;
+            }}
+            
+            QComboBox::down-arrow {{
+                image: none;
+                border: none;
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid {self.TEXT_PRIMARY};
+            }}
+            
+            QComboBox QAbstractItemView {{
+                background: rgba(16, 33, 62, 0.95);
+                color: {self.TEXT_PRIMARY};
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                selection-background-color: {self.BRIGHT_CYAN};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget {{
+                background: rgba(255, 255, 255, 0.08);
+                color: {self.TEXT_PRIMARY};
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+            }}
+            
+            QCalendarWidget QTableView {{
+                background: transparent;
+                color: {self.TEXT_PRIMARY};
+                gridline-color: rgba(255, 255, 255, 0.1);
+                selection-background-color: {self.BRIGHT_CYAN};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget QHeaderView::section {{
+                background: rgba(255, 255, 255, 0.1);
+                color: {self.TEXT_PRIMARY};
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 8px;
+                font-weight: 600;
             }}
         """)
         
         # Layout principal horizontal
         main_layout = QHBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
         
         # Splitter para dividir contenido principal y panel lateral
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -156,7 +316,7 @@ class ClienteDetalleWindow(QWidget):
         self.create_control_panel(splitter)
         
         # Configurar proporciones del splitter
-        splitter.setSizes([800, 300])
+        splitter.setSizes([1000, 300])
         
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
@@ -166,6 +326,7 @@ class ClienteDetalleWindow(QWidget):
         main_widget = QWidget()
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(15)
         
         # Frame de información del cliente
         self.create_cliente_frame(main_layout)
@@ -180,21 +341,36 @@ class ClienteDetalleWindow(QWidget):
         parent.addWidget(main_widget)
         
     def create_cliente_frame(self, layout):
-        """Crea el frame con información del cliente"""
-        cliente_frame = QFrame()
-        cliente_frame.setProperty("class", "section")
+        """Crea el frame con información del cliente usando ModernCard"""
+        cliente_frame = ModernCard()
+        cliente_frame.setMinimumHeight(280)
         cliente_layout = QVBoxLayout()
+        cliente_layout.setContentsMargins(20, 15, 20, 15)
+
         
-        # Título
+        # Título con ícono
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(10)
+        
+        icon_label = QLabel("👤")
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
         title_label = QLabel("INFORMACIÓN DEL CLIENTE")
         title_label.setProperty("class", "title")
-        cliente_layout.addWidget(title_label)
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        cliente_layout.addLayout(title_layout)
         
         # Grid para información del cliente
         info_widget = QWidget()
         info_layout = QGridLayout()
+        info_layout.setSpacing(15)
+        info_layout.setColumnStretch(1, 2)
         
-        # Crear campos de información
+        # Crear campos de información con estilo moderno
         fields = [
             ("Número de Cliente:", str(self.client_id)),
             ("Nombre:", self.client_data.get('nombre', 'N/A')),
@@ -211,7 +387,16 @@ class ClienteDetalleWindow(QWidget):
         for label_text, value_text in fields:
             label = QLabel(label_text)
             label.setProperty("class", "field-label")
+            label.setMinimumWidth(150)
+            
             value = QLabel(str(value_text))
+            value.setProperty("class", "field-value")
+            value.setWordWrap(True)
+            value.setMinimumHeight(25)
+            
+            # Color especial para el saldo
+            if "Saldo:" in label_text:
+                value.setStyleSheet(f"color: {self.BRIGHT_CYAN}; font-weight: bold; font-size: 14px;")
             
             info_layout.addWidget(label, row, 0)
             info_layout.addWidget(value, row, 1)
@@ -224,22 +409,27 @@ class ClienteDetalleWindow(QWidget):
         layout.addWidget(cliente_frame)
         
     def create_timeline_frame(self, layout):
-        """Crea el frame de timeline con scroll"""
-        timeline_frame = QFrame()
-        timeline_frame.setProperty("class", "section")
+        """Crea el frame de timeline con scroll usando ModernCard"""
+        timeline_frame = ModernCard()
         timeline_layout = QVBoxLayout()
+        timeline_layout.setContentsMargins(20, 15, 20, 15)
+        timeline_layout.setSpacing(15)
         
-        # Título
+        # Título con ícono
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(10)
+        
+        icon_label = QLabel("📋")
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
         title_label = QLabel("LÍNEA DE TIEMPO")
         title_label.setProperty("class", "title")
-        timeline_layout.addWidget(title_label)
         
-        # COMENTAMOS EL BOTÓN DE RECARGA (pero mantenemos la función)
-        # reload_btn = QPushButton("🔄 Recargar Notas")
-        # reload_btn.clicked.connect(self.load_client_notes)
-        # reload_btn.setMaximumWidth(150)
-        # timeline_layout.addWidget(reload_btn)
-    
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        timeline_layout.addLayout(title_layout)
         
         # Área de scroll para las notas
         scroll_area = QScrollArea()
@@ -263,20 +453,32 @@ class ClienteDetalleWindow(QWidget):
         layout.addWidget(timeline_frame)
         
     def create_adeudo_frame(self, layout):
-        """Crea el frame de adeudos con altura fija y scroll"""
-        adeudo_frame = QFrame()
-        adeudo_frame.setProperty("class", "section")
+        """Crea el frame de adeudos con altura fija y scroll usando ModernCard"""
+        adeudo_frame = ModernCard()
         adeudo_layout = QVBoxLayout()
+        adeudo_layout.setContentsMargins(20, 15, 20, 15)
+        adeudo_layout.setSpacing(15)
         
-        # Título
+        # Título con ícono
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(10)
+        
+        icon_label = QLabel("💰")
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
         title_label = QLabel("ADEUDOS")
         title_label.setProperty("class", "title")
-        adeudo_layout.addWidget(title_label)
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        adeudo_layout.addLayout(title_layout)
         
         # Área de scroll con altura fija para adeudos
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedHeight(200)  # Altura fija
+        scroll_area.setFixedHeight(200)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
@@ -289,24 +491,38 @@ class ClienteDetalleWindow(QWidget):
         adeudos = self.get_adeudos_from_db()
         
         if not adeudos:
-            no_adeudos_label = QLabel("No hay adeudos registrados")
+            no_adeudos_label = QLabel("📝 No hay adeudos registrados")
             no_adeudos_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_adeudos_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 20px;")
             adeudos_layout.addWidget(no_adeudos_label)
         else:
             # Crear lista de adeudos
             total = 0
             for adeudo in adeudos:
                 adeudo_row = QFrame()
-                adeudo_row.setProperty("class", "note-frame")
+                adeudo_row.setStyleSheet(f"""
+                    QFrame {{
+                        background: rgba(255, 255, 255, 0.05);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 8px;
+                        margin: 2px;
+                        padding: 8px;
+                    }}
+                    QFrame:hover {{
+                        background: rgba(255, 255, 255, 0.08);
+                        border-color: {self.BRIGHT_CYAN};
+                    }}
+                """)
                 row_layout = QHBoxLayout()
                 
                 # Información del ticket
-                ticket_info = QLabel(f"Ticket #{adeudo['ticket']} - {adeudo['fecha']}")
-                ticket_info.setStyleSheet("color: blue; text-decoration: underline; cursor: pointer;")
+                ticket_info = QLabel(f"🎫 Ticket #{adeudo['ticket']} - {adeudo['fecha']}")
+                ticket_info.setStyleSheet(f"color: {self.BRIGHT_CYAN}; text-decoration: underline; cursor: pointer; font-weight: 500;")
                 ticket_info.mousePressEvent = lambda event, data=adeudo: self.show_ticket_detail(data)
                 
                 monto_label = QLabel(f"${adeudo['monto']:,.2f}")
                 monto_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+                monto_label.setStyleSheet(f"color: {self.DANGER_RED}; font-weight: bold;")
                 
                 row_layout.addWidget(ticket_info)
                 row_layout.addWidget(monto_label)
@@ -321,13 +537,22 @@ class ClienteDetalleWindow(QWidget):
             
             # Total al final
             total_frame = QFrame()
+            total_frame.setStyleSheet(f"""
+                QFrame {{
+                    background: rgba({self.hex_to_rgb(self.DANGER_RED)}, 0.2);
+                    border: 2px solid {self.DANGER_RED};
+                    border-radius: 8px;
+                    padding: 10px;
+                }}
+            """)
             total_layout = QHBoxLayout()
             
-            total_label = QLabel("TOTAL:")
-            total_label.setProperty("class", "field-label")
+            total_label = QLabel("💸 TOTAL ADEUDO:")
+            total_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+            total_label.setStyleSheet(f"color: {self.TEXT_PRIMARY};")
             
             total_amount = QLabel(f"${total:,.2f}")
-            total_amount.setStyleSheet(f"color: {self.COLOR_ROJO}; font-weight: bold; font-size: 14px;")
+            total_amount.setStyleSheet(f"color: {self.DANGER_RED}; font-weight: bold; font-size: 16px;")
             total_amount.setAlignment(Qt.AlignmentFlag.AlignRight)
             
             total_layout.addWidget(total_label)
@@ -341,65 +566,84 @@ class ClienteDetalleWindow(QWidget):
         
         adeudo_frame.setLayout(adeudo_layout)
         layout.addWidget(adeudo_frame)
+
+    def hex_to_rgb(self, hex_color):
+        """Convertir color hex a RGB"""
+        hex_color = hex_color.lstrip('#')
+        return ', '.join(str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4))
         
     def create_control_panel(self, parent):
-        """Crea el panel de control lateral"""
-        control_widget = QWidget()
-        control_widget.setFixedWidth(280)
+        """Crea el panel de control lateral usando ModernCard"""
+        control_card = ModernCard()
+        control_card.setFixedWidth(320)
         control_layout = QVBoxLayout()
-        control_layout.setContentsMargins(10, 10, 10, 10)
+        control_layout.setContentsMargins(20, 15, 20, 15)
+        control_layout.setSpacing(12)
         
-        # Título del panel
+        # Título del panel con ícono
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(8)
+        
+        icon_label = QLabel("🎛️")
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
         title_label = QLabel("CONTROLES")
         title_label.setProperty("class", "title")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        control_layout.addWidget(title_label)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        control_layout.addLayout(title_layout)
         
         # Botón agregar nota
-        add_note_btn = QPushButton("+ Agregar Nota")
+        add_note_btn = ModernButton("📝 Agregar Nota")
         add_note_btn.clicked.connect(self.show_note_dialog)
         control_layout.addWidget(add_note_btn)
         
         # Botón agregar teléfono
-        add_phone_btn = QPushButton("+ Teléfono")
+        add_phone_btn = ModernButton("📞 Teléfono")
         add_phone_btn.clicked.connect(self.show_telefono_dialog)
         control_layout.addWidget(add_phone_btn)
         
         # Botones de notas rápidas
         quick_notes = [
-            ("Buzón", "Mandó a buzón de voz"),
-            ("No disponible", "El número marcado no está disponible"),
-            ("Notifico a WhatsApp", "Se le notificó vía WhatsApp")
+            ("🔇 Buzón", "Mandó a buzón de voz"),
+            ("❌ No disponible", "El número marcado no está disponible"),
+            ("💬 WhatsApp", "Se le notificó vía WhatsApp")
         ]
         
         for btn_text, note_text in quick_notes:
-            btn = QPushButton(btn_text)
+            btn = ModernButton(btn_text)
             btn.clicked.connect(lambda checked, text=note_text: self.create_quick_note(text))
             control_layout.addWidget(btn)
         
         # Separador
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
         control_layout.addWidget(separator)
         
         # Botón fecha promesa
-        calendar_btn = QPushButton("Fecha Promesa")
+        calendar_btn = ModernButton("📅 Fecha Promesa")
         calendar_btn.clicked.connect(self.show_calendar_dialog)
         control_layout.addWidget(calendar_btn)
         
         # Separador
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.Shape.HLine)
+        separator2.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
         control_layout.addWidget(separator2)
         
         # Botón empresa
-        self.company_btn = QPushButton()
+        self.company_btn = ModernButton("🏢 Estado Empresa")
         self.update_company_button()
         self.company_btn.clicked.connect(self.toggle_company)
         control_layout.addWidget(self.company_btn)
         
         # Botón buró
-        self.buro_btn = QPushButton()
+        self.buro_btn = ModernButton("⚠️ Estado Buró")
         self.update_buro_button()
         self.buro_btn.clicked.connect(self.toggle_buro)
         control_layout.addWidget(self.buro_btn)
@@ -407,23 +651,24 @@ class ClienteDetalleWindow(QWidget):
         # Separador
         separator3 = QFrame()
         separator3.setFrameShape(QFrame.Shape.HLine)
+        separator3.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
         control_layout.addWidget(separator3)
         
         # Botón WhatsApp
-        whatsapp_btn = QPushButton("Conversación WhatsApp")
+        whatsapp_btn = ModernButton("💬 WhatsApp")
         whatsapp_btn.clicked.connect(self.abrir_whatsapp)
         control_layout.addWidget(whatsapp_btn)
         
         # Botón llamada
-        phone_btn = QPushButton("Llamar por teléfono")
+        phone_btn = ModernButton("📞 Llamar")
         phone_btn.clicked.connect(self.realizar_llamada)
         control_layout.addWidget(phone_btn)
         
         # Espaciador
         control_layout.addStretch()
         
-        control_widget.setLayout(control_layout)
-        parent.addWidget(control_widget)
+        control_card.setLayout(control_layout)
+        parent.addWidget(control_card)
     
     def load_client_notes(self):
         """Carga las notas del cliente - VERSIÓN ULTRA SIMPLE"""
@@ -460,44 +705,79 @@ class ClienteDetalleWindow(QWidget):
             if not rows:
                 no_notes_label = QLabel("📝 No hay notas para este cliente")
                 no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                no_notes_label.setStyleSheet("color: gray; font-style: italic; padding: 20px;")
+                no_notes_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 30px; font-size: 14px;")
                 self.notes_layout.addWidget(no_notes_label)
                 logging.info("No hay notas - mostrando mensaje")
                 return
             
-            # Agregar cada nota
+            # Agregar cada nota con estilo glassmorphism
             for i, row in enumerate(rows):
                 logging.info(f"Agregando nota {i+1}: {row[0][:30]}...")
                 
-                # Frame para la nota
+                # Frame para la nota con estilo moderno
                 note_frame = QFrame()
-                note_frame.setStyleSheet("""
-                    QFrame {
-                        background-color: #f9f9f9;
-                        border: 1px solid #ddd;
-                        border-radius: 5px;
-                        margin: 3px;
-                        padding: 8px;
-                    }
+                note_frame.setStyleSheet(f"""
+                    QFrame {{
+                        background: rgba(255, 255, 255, 0.08);
+                        border: 1px solid rgba(255, 255, 255, 0.15);
+                        border-radius: 10px;
+                        margin: 4px;
+                        padding: 12px;
+                        backdrop-filter: blur(10px);
+                    }}
+                    QFrame:hover {{
+                        background: rgba(255, 255, 255, 0.12);
+                        border-color: {self.BRIGHT_CYAN};
+                    }}
                 """)
                 
                 note_layout = QVBoxLayout()
+                note_layout.setSpacing(8)
+                
+                # Header con fecha y usuario
+                header_layout = QHBoxLayout()
+                header_layout.setSpacing(10)
                 
                 # Fecha y usuario
                 fecha_str = row[1].strftime('%d/%m/%Y %H:%M') if row[1] else 'Sin fecha'
                 usuario_str = row[2] if row[2] else 'Sistema'
                 
-                header_label = QLabel(f"📅 {fecha_str} - 👤 {usuario_str}")
-                header_label.setFont(QFont("Arial", 9))
-                header_label.setStyleSheet("color: #666; font-weight: bold;")
+                # Ícono de fecha
+                date_icon = QLabel("📅")
+                date_icon.setFont(QFont("Segoe UI", 10))
+                
+                header_label = QLabel(f"{fecha_str}")
+                header_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                header_label.setStyleSheet(f"color: {self.BRIGHT_CYAN};")
+                
+                # Ícono de usuario
+                user_icon = QLabel("👤")
+                user_icon.setFont(QFont("Segoe UI", 9))
+                
+                user_label = QLabel(usuario_str)
+                user_label.setFont(QFont("Segoe UI", 9))
+                user_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic;")
+                
+                header_layout.addWidget(date_icon)
+                header_layout.addWidget(header_label)
+                header_layout.addStretch()
+                header_layout.addWidget(user_icon)
+                header_layout.addWidget(user_label)
                 
                 # Texto de la nota
                 text_label = QLabel(row[0])
                 text_label.setWordWrap(True)
-                text_label.setFont(QFont("Arial", 10))
-                text_label.setStyleSheet("color: #333; margin-top: 3px;")
+                text_label.setFont(QFont("Segoe UI", 11))
+                text_label.setStyleSheet(f"""
+                    color: {self.TEXT_PRIMARY}; 
+                    margin-top: 5px; 
+                    padding: 8px; 
+                    background: rgba(255, 255, 255, 0.05); 
+                    border-radius: 6px;
+                    border-left: 3px solid {self.BRIGHT_CYAN};
+                """)
                 
-                note_layout.addWidget(header_label)
+                note_layout.addLayout(header_layout)
                 note_layout.addWidget(text_label)
                 note_frame.setLayout(note_layout)
                 
@@ -548,9 +828,9 @@ class ClienteDetalleWindow(QWidget):
             # Verificar que tenemos notas para mostrar
             if not notes:
                 # Mostrar mensaje de "no hay notas"
-                no_notes_label = QLabel("No hay notas registradas para este cliente")
+                no_notes_label = QLabel("📝 No hay notas registradas para este cliente")
                 no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                no_notes_label.setStyleSheet("color: gray; font-style: italic; padding: 20px;")
+                no_notes_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 30px; font-size: 14px;")
                 self.notes_layout.addWidget(no_notes_label)
                 self.notes_layout.addStretch()
                 return
@@ -561,9 +841,24 @@ class ClienteDetalleWindow(QWidget):
                     logging.info(f"Agregando nota {idx}: {note.get('text', 'Sin texto')[:50]}...")
                     
                     note_frame = QFrame()
-                    note_frame.setProperty("class", "note-frame")
+                    note_frame.setStyleSheet(f"""
+                        QFrame {{
+                            background: rgba(255, 255, 255, 0.08);
+                            border: 1px solid rgba(255, 255, 255, 0.15);
+                            border-radius: 10px;
+                            margin: 4px;
+                            padding: 12px;
+                            backdrop-filter: blur(10px);
+                        }}
+                        QFrame:hover {{
+                            background: rgba(255, 255, 255, 0.12);
+                            border-color: {self.BRIGHT_CYAN};
+                        }}
+                    """)
+                    
                     note_layout = QVBoxLayout()
                     note_layout.setContentsMargins(8, 8, 8, 8)
+                    note_layout.setSpacing(8)
                     
                     # Header con fecha y usuario
                     header_layout = QHBoxLayout()
@@ -576,12 +871,12 @@ class ClienteDetalleWindow(QWidget):
                         timestamp_str = str(timestamp)
                     
                     date_label = QLabel(f"📅 {timestamp_str}")
-                    date_label.setFont(QFont("Arial", 9, QFont.Weight.Bold))
-                    date_label.setStyleSheet("color: #666;")
+                    date_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                    date_label.setStyleSheet(f"color: {self.BRIGHT_CYAN};")
                     
                     user_label = QLabel(f"👤 {note.get('user_name', 'Sistema')}")
-                    user_label.setFont(QFont("Arial", 9))
-                    user_label.setStyleSheet("color: #888; font-style: italic;")
+                    user_label.setFont(QFont("Segoe UI", 9))
+                    user_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic;")
                     
                     header_layout.addWidget(date_label)
                     header_layout.addStretch()
@@ -590,8 +885,15 @@ class ClienteDetalleWindow(QWidget):
                     # Texto de la nota
                     text_label = QLabel(note.get('text', 'Sin texto'))
                     text_label.setWordWrap(True)
-                    text_label.setFont(QFont("Arial", 10))
-                    text_label.setStyleSheet("margin-top: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 3px;")
+                    text_label.setFont(QFont("Segoe UI", 11))
+                    text_label.setStyleSheet(f"""
+                        color: {self.TEXT_PRIMARY}; 
+                        margin-top: 5px; 
+                        padding: 8px; 
+                        background: rgba(255, 255, 255, 0.05); 
+                        border-radius: 6px;
+                        border-left: 3px solid {self.BRIGHT_CYAN};
+                    """)
                     
                     note_layout.addLayout(header_layout)
                     note_layout.addWidget(text_label)
@@ -754,23 +1056,23 @@ class ClienteDetalleWindow(QWidget):
     def update_company_button(self):
         """Actualiza el botón de empresa"""
         is_company = self.get_company_state(self.client_id)
-        text = "No es empresa" if is_company else "Empresa"
         if is_company:
+            self.company_btn.setText("🏢 No es empresa")
             self.company_btn.setProperty("class", "danger")
         else:
+            self.company_btn.setText("🏢 Empresa")
             self.company_btn.setProperty("class", "")
-        self.company_btn.setText(text)
         self.company_btn.style().polish(self.company_btn)
         
     def update_buro_button(self):
         """Actualiza el botón de buró"""
         is_buro = self.get_buro_state(self.client_id)
-        text = "En Buró" if is_buro else "Buró"
         if is_buro:
+            self.buro_btn.setText("⚠️ En Buró")
             self.buro_btn.setProperty("class", "danger")
         else:
+            self.buro_btn.setText("⚠️ Buró")
             self.buro_btn.setProperty("class", "")
-        self.buro_btn.setText(text)
         self.buro_btn.style().polish(self.buro_btn)
         
     def toggle_company(self):
@@ -1006,10 +1308,11 @@ class ClienteDetalleWindow(QWidget):
         dialog.exec()
 
 
-# Diálogos auxiliares
+# Diálogos auxiliares con estilo glassmorphism
 class NoteDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
+        self.parent = parent
         self.setWindowTitle("Agregar Nota")
         self.setFixedSize(450, 250)
         
@@ -1020,11 +1323,67 @@ class NoteDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 250) // 2
             self.move(x, y)
         
+        # Aplicar estilo glassmorphism
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
+                    stop:0.7 #16213e, stop:1 #0a0a0a);
+                color: #ffffff;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: #ffffff;
+            }}
+            
+            QTextEdit {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: #ffffff;
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: #00b4d8;
+            }}
+            
+            QTextEdit:focus {{
+                border: 2px solid #00b4d8;
+                background: rgba(255, 255, 255, 0.12);
+            }}
+            
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+            }}
+            
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #00b4d8;
+            }}
+            
+            QPushButton[class="danger"] {{
+                background: rgba(239, 68, 68, 0.8);
+                border-color: #ef4444;
+            }}
+            
+            QPushButton[class="danger"]:hover {{
+                background: rgba(239, 68, 68, 0.9);
+            }}
+        """)
+        
         layout = QVBoxLayout()
+        layout.setSpacing(15)
         
         # Título
-        title_label = QLabel("Agregar nueva nota")
-        title_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title_label = QLabel("📝 Agregar nueva nota")
+        title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #00b4d8;")
         layout.addWidget(title_label)
         
         # Campo de texto
@@ -1036,7 +1395,7 @@ class NoteDialog(QDialog):
         
         # Contador de caracteres
         self.char_count = QLabel("0 caracteres")
-        self.char_count.setStyleSheet("color: gray; font-size: 10px;")
+        self.char_count.setStyleSheet("color: #a0a0a0; font-size: 10px;")
         layout.addWidget(self.char_count)
         
         # Conectar el contador
@@ -1045,10 +1404,10 @@ class NoteDialog(QDialog):
         # Botones
         button_layout = QHBoxLayout()
         
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton("❌ Cancelar")
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("Guardar Nota")
+        save_btn = QPushButton("💾 Guardar Nota")
         save_btn.clicked.connect(self.accept)
         save_btn.setProperty("class", "danger")
         save_btn.setDefault(True)
@@ -1073,6 +1432,7 @@ class NoteDialog(QDialog):
 class TelefonoDialog(QDialog):
     def __init__(self, parent, current_phone=""):
         super().__init__(parent)
+        self.parent = parent
         self.setWindowTitle("Agregar/Actualizar Teléfono")
         self.setFixedSize(400, 180)
         
@@ -1083,11 +1443,72 @@ class TelefonoDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 180) // 2
             self.move(x, y)
         
+        # Aplicar estilo glassmorphism
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
+                    stop:0.7 #16213e, stop:1 #0a0a0a);
+                color: #ffffff;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: #ffffff;
+            }}
+            
+            QLineEdit {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: #ffffff;
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: #00b4d8;
+            }}
+            
+            QLineEdit:focus {{
+                border: 2px solid #00b4d8;
+                background: rgba(255, 255, 255, 0.12);
+            }}
+            
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+            }}
+            
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #00b4d8;
+            }}
+            
+            QPushButton[class="danger"] {{
+                background: rgba(239, 68, 68, 0.8);
+                border-color: #ef4444;
+            }}
+            
+            QPushButton[class="danger"]:hover {{
+                background: rgba(239, 68, 68, 0.9);
+            }}
+        """)
+        
         layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        # Título
+        title_label = QLabel("📞 Agregar/Actualizar Teléfono")
+        title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #00b4d8;")
+        layout.addWidget(title_label)
         
         if current_phone and current_phone.strip():
             current_label = QLabel(f"Teléfono actual: {current_phone}")
-            current_label.setStyleSheet("color: #E31837; font-weight: bold;")
+            current_label.setStyleSheet("color: #fb923c; font-weight: bold;")
             layout.addWidget(current_label)
         
         layout.addWidget(QLabel("Nuevo teléfono:"))
@@ -1098,10 +1519,10 @@ class TelefonoDialog(QDialog):
         # Botones
         button_layout = QHBoxLayout()
         
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton("❌ Cancelar")
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("Guardar")
+        save_btn = QPushButton("💾 Guardar")
         save_btn.clicked.connect(self.accept)
         save_btn.setProperty("class", "danger")
         save_btn.setDefault(True)
@@ -1123,10 +1544,71 @@ class TelefonoDialog(QDialog):
 class TicketDetailDialog(QDialog):
     def __init__(self, parent, ticket_data):
         super().__init__(parent)
-        self.setWindowTitle(f"Ticket #{ticket_data['ticket']}")
+        self.parent = parent
+        self.setWindowTitle(f"🎫 Ticket #{ticket_data['ticket']}")
         self.setFixedSize(450, 600)
         
+        # Aplicar estilo glassmorphism
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
+                    stop:0.7 #16213e, stop:1 #0a0a0a);
+                color: #ffffff;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: #ffffff;
+            }}
+            
+            QScrollArea {{
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }}
+            
+            QScrollArea QWidget {{
+                background: transparent;
+            }}
+            
+            QScrollBar:vertical {{
+                background: rgba(255, 255, 255, 0.05);
+                width: 8px;
+                border-radius: 4px;
+                margin: 0;
+            }}
+            
+            QScrollBar::handle:vertical {{
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            
+            QPushButton {{
+                background: rgba(239, 68, 68, 0.8);
+                color: #ffffff;
+                border: 1px solid #ef4444;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+            }}
+            
+            QPushButton:hover {{
+                background: rgba(239, 68, 68, 0.9);
+            }}
+        """)
+        
         layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        # Título
+        title_label = QLabel(f"🎫 Detalles del Ticket #{ticket_data['ticket']}")
+        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #00b4d8; text-align: center;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
         
         # Área de scroll para el contenido del ticket
         scroll_area = QScrollArea()
@@ -1135,6 +1617,7 @@ class TicketDetailDialog(QDialog):
         # Widget contenedor
         content_widget = QWidget()
         content_layout = QVBoxLayout()
+        content_layout.setSpacing(5)
         
         # Procesar y mostrar el contenido del ticket
         lines = ticket_data['datos'].split('\r\n')
@@ -1146,23 +1629,31 @@ class TicketDetailDialog(QDialog):
                 
             # Crear etiqueta para cada línea
             line_label = QLabel(line)
-            line_label.setFont(QFont("Courier", 9))
+            line_label.setFont(QFont("Courier New", 9))
             line_label.setWordWrap(True)
+            line_label.setStyleSheet("background: transparent;")
             
             # Estilos especiales para diferentes tipos de líneas
             if "GARCIA RINES" in line:
-                line_label.setFont(QFont("Courier", 11, QFont.Weight.Bold))
+                line_label.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
                 line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                line_label.setStyleSheet("color: #00b4d8; font-weight: bold;")
             elif line.startswith("TICKET:") or line.startswith("CLIENTE:"):
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet("color: #4ade80; font-weight: bold;")
             elif "CANT" in line and "DESCRIPCION" in line:
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet("color: #fb923c; font-weight: bold;")
             elif "ARTICULOS" in line or "IMPORTE:" in line or "ADEUDA:" in line:
                 line_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet("color: #ef4444; font-weight: bold;")
             elif "DEBO Y PAGARE" in line or "ACEPTO" in line:
                 line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                line_label.setFont(QFont("Courier", 9, QFont.Weight.Bold))
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet("color: #a855f7; font-weight: bold;")
+            else:
+                line_label.setStyleSheet("color: #ffffff;")
             
             content_layout.addWidget(line_label)
         
@@ -1172,9 +1663,8 @@ class TicketDetailDialog(QDialog):
         layout.addWidget(scroll_area)
         
         # Botón cerrar
-        close_btn = QPushButton("Cerrar")
+        close_btn = QPushButton("🔒 Cerrar")
         close_btn.clicked.connect(self.accept)
-        close_btn.setProperty("class", "danger")
         layout.addWidget(close_btn)
         
         self.setLayout(layout)
@@ -1182,7 +1672,8 @@ class TicketDetailDialog(QDialog):
 class CalendarDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle("Seleccionar Fecha de Promesa")
+        self.parent = parent
+        self.setWindowTitle("📅 Seleccionar Fecha de Promesa")
         self.setFixedSize(400, 480)
         
         # ESTABLECER ÍCONO PARA EL DIÁLOGO TAMBIÉN
@@ -1202,81 +1693,165 @@ class CalendarDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 480) // 2
             self.move(x, y)
         
-        # APLICAR ESTILO FORZADO PARA TODA LA VENTANA
-        self.setStyleSheet("""
-            QDialog {
-                background-color: white;
-                color: black;
-            }
+        # APLICAR ESTILO GLASSMORPHISM
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
+                    stop:0.7 #16213e, stop:1 #0a0a0a);
+                color: #ffffff;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
             
-            QLabel {
-                color: black;
+            QLabel {{
+                color: #ffffff;
                 background-color: transparent;
-            }
+            }}
             
-            QComboBox {
-                background-color: white;
-                color: black;
-                border: 2px solid #ddd;
+            QComboBox {{
+                background: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
                 padding: 8px;
-                border-radius: 4px;
+                border-radius: 8px;
                 font-size: 11px;
-            }
+            }}
             
-            QComboBox:hover {
-                border-color: #E31837;
-            }
+            QComboBox:hover {{
+                border-color: #00b4d8;
+                background: rgba(255, 255, 255, 0.12);
+            }}
             
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 20px;
+            QComboBox::drop-down {{
                 border: none;
-            }
+                background: transparent;
+            }}
             
-            QComboBox::down-arrow {
+            QComboBox::down-arrow {{
                 image: none;
                 border: none;
                 width: 0px;
                 height: 0px;
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
-                border-top: 5px solid black;
-            }
+                border-top: 5px solid #ffffff;
+            }}
             
-            QComboBox QAbstractItemView {
-                background-color: white;
-                color: black;
-                border: 1px solid #ddd;
-                selection-background-color: #E31837;
+            QComboBox QAbstractItemView {{
+                background: rgba(16, 33, 62, 0.95);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                selection-background-color: #00b4d8;
                 selection-color: white;
-            }
+            }}
             
-            QPushButton {
-                background-color: white;
-                color: black;
-                border: 2px solid #ddd;
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
                 padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 11px;
+            }}
+            
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #00b4d8;
+            }}
+            
+            QPushButton[class="danger"] {{
+                background: rgba(239, 68, 68, 0.8);
+                color: white;
+                border-color: #ef4444;
+            }}
+            
+            QPushButton[class="danger"]:hover {{
+                background: rgba(239, 68, 68, 0.9);
+            }}
+            
+            QCalendarWidget {{
+                background: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 12px;
+                selection-background-color: #00b4d8;
+            }}
+            
+            QCalendarWidget QWidget#qt_calendar_navigationbar {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+            }}
+            
+            QCalendarWidget QToolButton {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 6px;
+                margin: 2px;
                 border-radius: 6px;
                 font-weight: bold;
-                font-size: 11px;
-            }
+            }}
             
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #999;
-            }
-            
-            QPushButton[class="danger"] {
-                background-color: #E31837;
+            QCalendarWidget QToolButton:hover {{
+                background: rgba(0, 180, 216, 0.8);
                 color: white;
-                border-color: #E31837;
-            }
+                border-color: #00b4d8;
+            }}
             
-            QPushButton[class="danger"]:hover {
-                background-color: #C41230;
-                border-color: #C41230;
-            }
+            QCalendarWidget QSpinBox {{
+                background: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 4px;
+                border-radius: 4px;
+            }}
+            
+            QCalendarWidget QTableView {{
+                background: transparent;
+                color: #ffffff;
+                gridline-color: rgba(255, 255, 255, 0.1);
+                selection-background-color: #00b4d8;
+                selection-color: white;
+            }}
+            
+            QCalendarWidget QHeaderView::section {{
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 8px;
+                font-weight: 600;
+                font-size: 10px;
+            }}
+            
+            QCalendarWidget QAbstractItemView::item {{
+                color: #ffffff;
+                background: transparent;
+                padding: 8px;
+            }}
+            
+            QCalendarWidget QAbstractItemView::item:hover {{
+                background: rgba(0, 180, 216, 0.3);
+                color: #ffffff;
+            }}
+            
+            QCalendarWidget QAbstractItemView::item:selected {{
+                background: #00b4d8;
+                color: white;
+                font-weight: bold;
+            }}
+            
+            QCalendarWidget QAbstractItemView::item:disabled {{
+                color: #666666;
+                background: rgba(255, 255, 255, 0.05);
+            }}
+            
+            QFrame[frameShape="4"] {{
+                background: rgba(255, 255, 255, 0.2);
+                max-height: 1px;
+                margin: 10px 0;
+            }}
         """)
         
         layout = QVBoxLayout()
@@ -1284,120 +1859,30 @@ class CalendarDialog(QDialog):
         layout.setSpacing(15)
         
         # Título
-        title_label = QLabel("📅 Seleccione la fecha de promesa:")
-        title_label.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        title_label = QLabel("📅 Seleccione la fecha de promesa")
+        title_label.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("color: #00b4d8;")
         layout.addWidget(title_label)
         
-        # Calendario con estilos MEGA FORZADOS
+        # Calendario
         self.calendar = QCalendarWidget()
         self.calendar.setMinimumDate(QDate.currentDate())
         self.calendar.setMinimumSize(350, 280)
-        
-        # ESTILOS SÚPER ESPECÍFICOS PARA EL CALENDARIO
-        calendar_style = """
-            QCalendarWidget {
-                background-color: white !important;
-                color: black !important;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-            }
-            
-            /* Header con año y mes */
-            QCalendarWidget QWidget#qt_calendar_navigationbar {
-                background-color: #f8f9fa !important;
-                color: black !important;
-            }
-            
-            /* Botones de navegación */
-            QCalendarWidget QToolButton {
-                background-color: white !important;
-                color: black !important;
-                border: 1px solid #ddd;
-                padding: 6px;
-                margin: 2px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            
-            QCalendarWidget QToolButton:hover {
-                background-color: #E31837 !important;
-                color: white !important;
-            }
-            
-            /* SpinBox para año */
-            QCalendarWidget QSpinBox {
-                background-color: white !important;
-                color: black !important;
-                border: 1px solid #ddd;
-                padding: 4px;
-                border-radius: 3px;
-            }
-            
-            /* Tabla de días */
-            QCalendarWidget QTableView {
-                background-color: white !important;
-                color: black !important;
-                gridline-color: #e0e0e0 !important;
-                selection-background-color: #E31837 !important;
-                selection-color: white !important;
-            }
-            
-            /* Header de días de la semana */
-            QCalendarWidget QHeaderView::section {
-                background-color: #f1f3f4 !important;
-                color: black !important;
-                border: 1px solid #e0e0e0;
-                padding: 8px;
-                font-weight: bold;
-            }
-            
-            /* Días del mes */
-            QCalendarWidget QAbstractItemView:enabled {
-                color: black !important;
-                background-color: white !important;
-            }
-            
-            QCalendarWidget QAbstractItemView::item {
-                color: black !important;
-                background-color: white !important;
-                padding: 8px;
-            }
-            
-            QCalendarWidget QAbstractItemView::item:hover {
-                background-color: #ffebee !important;
-                color: black !important;
-            }
-            
-            QCalendarWidget QAbstractItemView::item:selected {
-                background-color: #E31837 !important;
-                color: white !important;
-                font-weight: bold;
-            }
-            
-            /* Días de otros meses */
-            QCalendarWidget QAbstractItemView::item:disabled {
-                color: #999 !important;
-                background-color: #f9f9f9 !important;
-            }
-        """
-        
-        self.calendar.setStyleSheet(calendar_style)
         layout.addWidget(self.calendar)
         
         # Separador visual
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet("background-color: #ddd; max-height: 1px;")
         layout.addWidget(separator)
         
-        # Método de pago con mejor diseño
+        # Método de pago
         payment_frame = QFrame()
         payment_layout = QHBoxLayout()
         payment_layout.setSpacing(10)
         
         payment_label = QLabel("💳 Método de pago:")
-        payment_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        payment_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         payment_layout.addWidget(payment_label)
         
         self.payment_combo = QComboBox()
@@ -1410,7 +1895,7 @@ class CalendarDialog(QDialog):
         payment_frame.setLayout(payment_layout)
         layout.addWidget(payment_frame)
         
-        # Botones con mejor espaciado
+        # Botones
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
