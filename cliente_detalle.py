@@ -1,4 +1,3 @@
-# cliente_detalle.py
 import os
 import sys
 import logging
@@ -16,10 +15,14 @@ from PyQt6.QtGui import QFont, QColor, QIcon, QPainter, QPainterPath, QLinearGra
 from database import (get_db_connection, get_client_notes, update_promise_date, 
                      update_telefono3, format_phone_number, UserSession)
 
+# Importar el theme manager
+from theme_manager import ThemeManager
+
 class ModernCard(QFrame):
-    """Tarjeta moderna con efectos de glassmorphism para cliente detalle"""
-    def __init__(self, parent=None):
+    """Tarjeta moderna con efectos de glassmorphism que se adapta al tema"""
+    def __init__(self, theme_manager, parent=None):
         super().__init__(parent)
+        self.theme_manager = theme_manager
         self.setFrameStyle(QFrame.Shape.NoFrame)
         
         # Aplicar sombra
@@ -33,22 +36,30 @@ class ModernCard(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Crear gradiente de fondo glassmorphism
+        # Crear gradiente de fondo glassmorphism adaptativo
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(255, 255, 255, 30))
-        gradient.setColorAt(1, QColor(255, 255, 255, 20))
+        
+        if self.theme_manager.is_dark_theme():
+            gradient.setColorAt(0, QColor(255, 255, 255, 30))
+            gradient.setColorAt(1, QColor(255, 255, 255, 20))
+            border_color = QColor(255, 255, 255, 60)
+        else:
+            gradient.setColorAt(0, QColor(255, 255, 255, 200))
+            gradient.setColorAt(1, QColor(248, 249, 250, 180))
+            border_color = QColor(0, 0, 0, 30)
         
         # Dibujar fondo con bordes redondeados
         painter.setBrush(gradient)
-        painter.setPen(QColor(255, 255, 255, 60))
+        painter.setPen(border_color)
         path = QPainterPath()
         path.addRoundedRect(0, 0, self.width(), self.height(), 16, 16)
         painter.drawPath(path)
 
 class ModernButton(QPushButton):
-    """Botón moderno con efectos de glassmorphism"""
-    def __init__(self, text, parent=None):
+    """Botón moderno con efectos de glassmorphism que se adapta al tema"""
+    def __init__(self, text, theme_manager, parent=None):
         super().__init__(text, parent)
+        self.theme_manager = theme_manager
         self.setFixedHeight(40)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
@@ -56,30 +67,51 @@ class ModernButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Crear gradiente de fondo
+        # Crear gradiente de fondo adaptativo
         gradient = QLinearGradient(0, 0, 0, self.height())
-        if self.property("class") == "danger":
-            gradient.setColorAt(0, QColor(239, 68, 68, 200))
-            gradient.setColorAt(1, QColor(220, 38, 38, 180))
-        elif self.isChecked():
-            gradient.setColorAt(0, QColor(255, 255, 255, 25))
-            gradient.setColorAt(1, QColor(255, 255, 255, 15))
+        
+        if self.theme_manager.is_dark_theme():
+            if self.property("class") == "danger":
+                gradient.setColorAt(0, QColor(239, 68, 68, 200))
+                gradient.setColorAt(1, QColor(220, 38, 38, 180))
+                text_color = QColor(255, 255, 255, 240)
+                border_color = QColor(239, 68, 68, 200)
+            elif self.isChecked():
+                gradient.setColorAt(0, QColor(255, 255, 255, 25))
+                gradient.setColorAt(1, QColor(255, 255, 255, 15))
+                text_color = QColor(255, 255, 255, 230)
+                border_color = QColor(255, 255, 255, 30)
+            else:
+                gradient.setColorAt(0, QColor(255, 255, 255, 10))
+                gradient.setColorAt(1, QColor(255, 255, 255, 5))
+                text_color = QColor(255, 255, 255, 180)
+                border_color = QColor(255, 255, 255, 30)
         else:
-            gradient.setColorAt(0, QColor(255, 255, 255, 10))
-            gradient.setColorAt(1, QColor(255, 255, 255, 5))
+            if self.property("class") == "danger":
+                gradient.setColorAt(0, QColor(220, 53, 69, 200))
+                gradient.setColorAt(1, QColor(200, 35, 51, 180))
+                text_color = QColor(255, 255, 255, 255)
+                border_color = QColor(220, 53, 69, 200)
+            elif self.isChecked():
+                gradient.setColorAt(0, QColor(25, 118, 210, 200))
+                gradient.setColorAt(1, QColor(25, 118, 210, 150))
+                text_color = QColor(255, 255, 255, 255)
+                border_color = QColor(25, 118, 210, 200)
+            else:
+                gradient.setColorAt(0, QColor(255, 255, 255, 200))
+                gradient.setColorAt(1, QColor(248, 249, 250, 150))
+                text_color = QColor(33, 37, 41, 200)
+                border_color = QColor(0, 0, 0, 50)
         
         # Dibujar fondo con bordes redondeados
         painter.setBrush(gradient)
-        painter.setPen(QColor(255, 255, 255, 30))
+        painter.setPen(border_color)
         path = QPainterPath()
         path.addRoundedRect(0, 0, self.width(), self.height(), 10, 10)
         painter.drawPath(path)
         
         # Dibujar texto
-        if self.property("class") == "danger":
-            painter.setPen(QColor(255, 255, 255, 240))
-        else:
-            painter.setPen(QColor(255, 255, 255, 230) if self.isChecked() else QColor(255, 255, 255, 180))
+        painter.setPen(text_color)
         painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
 
@@ -90,7 +122,14 @@ class ClienteDetalleWindow(QWidget):
         self.client_data = client_data
         self.client_id = client_id
         
-        # ESTABLECER ÍCONO PARA LA VENTANA DE DETALLES TAMBIÉN
+        # OBTENER THEME MANAGER DEL PADRE
+        if hasattr(parent, 'theme_manager'):
+            self.theme_manager = parent.theme_manager
+        else:
+            # Fallback - crear nuevo theme manager
+            self.theme_manager = ThemeManager()
+        
+        # ESTABLECER ÍCONO PARA LA VENTANA DE DETALLES
         try:
             icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
             
@@ -106,32 +145,30 @@ class ClienteDetalleWindow(QWidget):
         except Exception as e:
             logging.error(f"Error al establecer ícono de ventana de detalles: {e}")
         
-        # Paleta de colores moderna - SIGUIENDO EL ESTILO DE MAIN
-        self.DARK_BG = "#0a0a0a"          # Fondo principal oscuro
-        self.CARD_BG = "#16213e"          # Fondo de tarjetas
-        self.ACCENT_BLUE = "#0f3460"      # Azul oscuro para acentos
-        self.BRIGHT_CYAN = "#00b4d8"      # Cian brillante
-        self.TEXT_PRIMARY = "#ffffff"      # Texto principal
-        self.TEXT_SECONDARY = "#a0a0a0"   # Texto secundario
-        self.SUCCESS_GREEN = "#4ade80"    # Verde éxito
-        self.WARNING_ORANGE = "#fb923c"   # Naranja advertencia
-        self.DANGER_RED = "#ef4444"       # Rojo peligro
-        self.PROMISE_PURPLE = "#a855f7"   # Morado para promesas
-        
         # PRIMERO crear la UI
         self.initUI()
         
         # DESPUÉS cargar las notas (cuando ya existe notes_layout)
         self.load_client_notes()
-        
-        # Debug: verificar que notes_layout existe después de crear la UI
-        logging.info(f"Al final de __init__, notes_layout existe: {hasattr(self, 'notes_layout')}")
-        if hasattr(self, 'notes_layout'):
-            logging.info(f"notes_layout es None: {self.notes_layout is None}")
-            logging.info(f"notes_layout count: {self.notes_layout.count()}")
+
+    def get_current_colors(self):
+        """Obtiene los colores del tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        return {
+            'DARK_BG': theme['DARK_BG'],
+            'CARD_BG': theme['CARD_BG'],
+            'ACCENT_BLUE': theme['ACCENT_BLUE'],
+            'BRIGHT_CYAN': theme['BRIGHT_CYAN'],
+            'TEXT_PRIMARY': theme['TEXT_PRIMARY'],
+            'TEXT_SECONDARY': theme['TEXT_SECONDARY'],
+            'SUCCESS_GREEN': theme['SUCCESS_GREEN'],
+            'WARNING_ORANGE': theme['WARNING_ORANGE'],
+            'DANGER_RED': theme['DANGER_RED'],
+            'PROMISE_PURPLE': theme['PROMISE_PURPLE']
+        }
         
     def initUI(self):
-        """Inicializa la interfaz de usuario con estilo glassmorphism"""
+        """Inicializa la interfaz de usuario con estilo glassmorphism adaptativo"""
         self.setWindowTitle(f"Detalle Cliente - {self.client_data.get('nombre', 'Sin nombre')}")
         
         # Centrar la ventana correctamente
@@ -147,159 +184,8 @@ class ClienteDetalleWindow(QWidget):
         self.setGeometry(x, y, window_width, window_height)
         self.setFixedSize(window_width, window_height)
         
-        # Aplicar estilo glassmorphism moderno - SIGUIENDO MAIN
-        self.setStyleSheet(f"""
-            QWidget {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 {self.DARK_BG}, stop:0.3 #1a1a2e, 
-                    stop:0.7 #16213e, stop:1 {self.DARK_BG});
-                color: {self.TEXT_PRIMARY};
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }}
-            
-            QLabel {{
-                background: transparent;
-                color: {self.TEXT_PRIMARY};
-            }}
-            
-            QLabel.title {{
-                font-size: 16px;
-                font-weight: bold;
-                color: {self.BRIGHT_CYAN};
-                padding: 10px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }}
-            
-            QLabel.field-label {{
-                font-weight: 600;
-                color: {self.TEXT_SECONDARY};
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-            
-            QLabel.field-value {{
-                color: {self.TEXT_PRIMARY};
-                font-size: 12px;
-                font-weight: 500;
-                padding: 2px 0;
-            }}
-            
-            QScrollArea {{
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                backdrop-filter: blur(10px);
-            }}
-            
-            QScrollArea QWidget {{
-                background: transparent;
-            }}
-            
-            QScrollBar:vertical {{
-                background: rgba(255, 255, 255, 0.05);
-                width: 8px;
-                border-radius: 4px;
-                margin: 0;
-            }}
-            
-            QScrollBar::handle:vertical {{
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                min-height: 20px;
-            }}
-            
-            QScrollBar::handle:vertical:hover {{
-                background: rgba(255, 255, 255, 0.3);
-            }}
-            
-            QTextEdit {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: {self.TEXT_PRIMARY};
-                padding: 8px;
-                font-size: 11px;
-                selection-background-color: {self.BRIGHT_CYAN};
-            }}
-            
-            QLineEdit {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: {self.TEXT_PRIMARY};
-                padding: 8px;
-                font-size: 11px;
-                selection-background-color: {self.BRIGHT_CYAN};
-            }}
-            
-            QLineEdit:focus, QTextEdit:focus {{
-                border: 2px solid {self.BRIGHT_CYAN};
-                background: rgba(255, 255, 255, 0.12);
-            }}
-            
-            QComboBox {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: {self.TEXT_PRIMARY};
-                padding: 8px;
-                font-size: 11px;
-            }}
-            
-            QComboBox:hover {{
-                border-color: {self.BRIGHT_CYAN};
-                background: rgba(255, 255, 255, 0.12);
-            }}
-            
-            QComboBox::drop-down {{
-                border: none;
-                background: transparent;
-            }}
-            
-            QComboBox::down-arrow {{
-                image: none;
-                border: none;
-                width: 0px;
-                height: 0px;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid {self.TEXT_PRIMARY};
-            }}
-            
-            QComboBox QAbstractItemView {{
-                background: rgba(16, 33, 62, 0.95);
-                color: {self.TEXT_PRIMARY};
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                selection-background-color: {self.BRIGHT_CYAN};
-                selection-color: white;
-            }}
-            
-            QCalendarWidget {{
-                background: rgba(255, 255, 255, 0.08);
-                color: {self.TEXT_PRIMARY};
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-            }}
-            
-            QCalendarWidget QTableView {{
-                background: transparent;
-                color: {self.TEXT_PRIMARY};
-                gridline-color: rgba(255, 255, 255, 0.1);
-                selection-background-color: {self.BRIGHT_CYAN};
-                selection-color: white;
-            }}
-            
-            QCalendarWidget QHeaderView::section {{
-                background: rgba(255, 255, 255, 0.1);
-                color: {self.TEXT_PRIMARY};
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 8px;
-                font-weight: 600;
-            }}
-        """)
+        # Aplicar estilo glassmorphism moderno adaptativo
+        self.apply_theme_styles()
         
         # Layout principal horizontal
         main_layout = QHBoxLayout()
@@ -320,6 +206,174 @@ class ClienteDetalleWindow(QWidget):
         
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
+
+    def apply_theme_styles(self):
+        """Aplica los estilos según el tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        colors = self.get_current_colors()
+        
+        self.setStyleSheet(f"""
+            QWidget {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {colors['TEXT_PRIMARY']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: {colors['TEXT_PRIMARY']};
+            }}
+            
+            QLabel.title {{
+                font-size: 16px;
+                font-weight: bold;
+                color: {colors['BRIGHT_CYAN']};
+                padding: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            
+            QLabel.field-label {{
+                font-weight: 600;
+                color: {colors['TEXT_SECONDARY']};
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            
+            QLabel.field-value {{
+                color: {colors['TEXT_PRIMARY']};
+                font-size: 12px;
+                font-weight: 500;
+                padding: 2px 0;
+            }}
+            
+            QScrollArea {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 12px;
+                backdrop-filter: blur(10px);
+            }}
+            
+            QScrollArea QWidget {{
+                background: transparent;
+            }}
+            
+            QScrollBar:vertical {{
+                background: {theme['card_bg_alpha']};
+                width: 8px;
+                border-radius: 4px;
+                margin: 0;
+            }}
+            
+            QScrollBar::handle:vertical {{
+                background: {theme['border_alpha']};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            
+            QScrollBar::handle:vertical:hover {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.5);
+            }}
+            
+            QTextEdit {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                color: {colors['TEXT_PRIMARY']};
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: {colors['BRIGHT_CYAN']};
+            }}
+            
+            QTextEdit:focus {{
+                border: 2px solid {colors['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
+            }}
+            
+            QLineEdit {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                color: {colors['TEXT_PRIMARY']};
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: {colors['BRIGHT_CYAN']};
+            }}
+            
+            QLineEdit:focus {{
+                border: 2px solid {colors['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
+            }}
+            
+            QComboBox {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                color: {colors['TEXT_PRIMARY']};
+                padding: 8px;
+                font-size: 11px;
+            }}
+            
+            QComboBox:hover {{
+                border-color: {colors['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
+            }}
+            
+            QComboBox::drop-down {{
+                border: none;
+                background: transparent;
+            }}
+            
+            QComboBox::down-arrow {{
+                image: none;
+                border: none;
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid {colors['TEXT_PRIMARY']};
+            }}
+            
+            QComboBox QAbstractItemView {{
+                background: {theme['CARD_BG']};
+                color: {colors['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                selection-background-color: {colors['BRIGHT_CYAN']};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget {{
+                background: {theme['card_bg_alpha']};
+                color: {colors['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+            }}
+            
+            QCalendarWidget QTableView {{
+                background: transparent;
+                color: {colors['TEXT_PRIMARY']};
+                gridline-color: {theme['border_alpha']};
+                selection-background-color: {colors['BRIGHT_CYAN']};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget QHeaderView::section {{
+                background: {theme['card_bg_alpha']};
+                color: {colors['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                padding: 8px;
+                font-weight: 600;
+            }}
+        """)
+
+    def hex_to_rgb(self, hex_color):
+        """Convertir color hex a RGB"""
+        hex_color = hex_color.lstrip('#')
+        return ', '.join(str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4))
         
     def create_main_content_area(self, parent):
         """Crea el área principal de contenido"""
@@ -342,11 +396,12 @@ class ClienteDetalleWindow(QWidget):
         
     def create_cliente_frame(self, layout):
         """Crea el frame con información del cliente usando ModernCard"""
-        cliente_frame = ModernCard()
+        colors = self.get_current_colors()
+        
+        cliente_frame = ModernCard(self.theme_manager)
         cliente_frame.setMinimumHeight(280)
         cliente_layout = QVBoxLayout()
         cliente_layout.setContentsMargins(20, 15, 20, 15)
-
         
         # Título con ícono
         title_layout = QHBoxLayout()
@@ -396,7 +451,7 @@ class ClienteDetalleWindow(QWidget):
             
             # Color especial para el saldo
             if "Saldo:" in label_text:
-                value.setStyleSheet(f"color: {self.BRIGHT_CYAN}; font-weight: bold; font-size: 14px;")
+                value.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; font-weight: bold; font-size: 14px;")
             
             info_layout.addWidget(label, row, 0)
             info_layout.addWidget(value, row, 1)
@@ -410,7 +465,7 @@ class ClienteDetalleWindow(QWidget):
         
     def create_timeline_frame(self, layout):
         """Crea el frame de timeline con scroll usando ModernCard"""
-        timeline_frame = ModernCard()
+        timeline_frame = ModernCard(self.theme_manager)
         timeline_layout = QVBoxLayout()
         timeline_layout.setContentsMargins(20, 15, 20, 15)
         timeline_layout.setSpacing(15)
@@ -442,10 +497,6 @@ class ClienteDetalleWindow(QWidget):
         self.notes_layout = QVBoxLayout()  # AQUÍ SE CREA notes_layout
         self.notes_widget.setLayout(self.notes_layout)
         
-        # Verificar que se creó correctamente
-        logging.info(f"notes_layout creado: {self.notes_layout}")
-        logging.info(f"notes_widget creado: {self.notes_widget}")
-        
         scroll_area.setWidget(self.notes_widget)
         timeline_layout.addWidget(scroll_area)
         
@@ -454,7 +505,10 @@ class ClienteDetalleWindow(QWidget):
         
     def create_adeudo_frame(self, layout):
         """Crea el frame de adeudos con altura fija y scroll usando ModernCard"""
-        adeudo_frame = ModernCard()
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        adeudo_frame = ModernCard(self.theme_manager)
         adeudo_layout = QVBoxLayout()
         adeudo_layout.setContentsMargins(20, 15, 20, 15)
         adeudo_layout.setSpacing(15)
@@ -493,7 +547,7 @@ class ClienteDetalleWindow(QWidget):
         if not adeudos:
             no_adeudos_label = QLabel("📝 No hay adeudos registrados")
             no_adeudos_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_adeudos_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 20px;")
+            no_adeudos_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']}; font-style: italic; padding: 20px;")
             adeudos_layout.addWidget(no_adeudos_label)
         else:
             # Crear lista de adeudos
@@ -502,27 +556,27 @@ class ClienteDetalleWindow(QWidget):
                 adeudo_row = QFrame()
                 adeudo_row.setStyleSheet(f"""
                     QFrame {{
-                        background: rgba(255, 255, 255, 0.05);
-                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        background: {theme['card_bg_alpha']};
+                        border: 1px solid {theme['border_alpha']};
                         border-radius: 8px;
                         margin: 2px;
                         padding: 8px;
                     }}
                     QFrame:hover {{
-                        background: rgba(255, 255, 255, 0.08);
-                        border-color: {self.BRIGHT_CYAN};
+                        background: {theme['hover_alpha']};
+                        border-color: {colors['BRIGHT_CYAN']};
                     }}
                 """)
                 row_layout = QHBoxLayout()
                 
                 # Información del ticket
                 ticket_info = QLabel(f"🎫 Ticket #{adeudo['ticket']} - {adeudo['fecha']}")
-                ticket_info.setStyleSheet(f"color: {self.BRIGHT_CYAN}; text-decoration: underline; cursor: pointer; font-weight: 500;")
+                ticket_info.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; text-decoration: underline; cursor: pointer; font-weight: 500;")
                 ticket_info.mousePressEvent = lambda event, data=adeudo: self.show_ticket_detail(data)
                 
                 monto_label = QLabel(f"${adeudo['monto']:,.2f}")
                 monto_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-                monto_label.setStyleSheet(f"color: {self.DANGER_RED}; font-weight: bold;")
+                monto_label.setStyleSheet(f"color: {colors['DANGER_RED']}; font-weight: bold;")
                 
                 row_layout.addWidget(ticket_info)
                 row_layout.addWidget(monto_label)
@@ -539,8 +593,8 @@ class ClienteDetalleWindow(QWidget):
             total_frame = QFrame()
             total_frame.setStyleSheet(f"""
                 QFrame {{
-                    background: rgba({self.hex_to_rgb(self.DANGER_RED)}, 0.2);
-                    border: 2px solid {self.DANGER_RED};
+                    background: rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.2);
+                    border: 2px solid {colors['DANGER_RED']};
                     border-radius: 8px;
                     padding: 10px;
                 }}
@@ -549,10 +603,10 @@ class ClienteDetalleWindow(QWidget):
             
             total_label = QLabel("💸 TOTAL ADEUDO:")
             total_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-            total_label.setStyleSheet(f"color: {self.TEXT_PRIMARY};")
+            total_label.setStyleSheet(f"color: {colors['TEXT_PRIMARY']};")
             
             total_amount = QLabel(f"${total:,.2f}")
-            total_amount.setStyleSheet(f"color: {self.DANGER_RED}; font-weight: bold; font-size: 16px;")
+            total_amount.setStyleSheet(f"color: {colors['DANGER_RED']}; font-weight: bold; font-size: 16px;")
             total_amount.setAlignment(Qt.AlignmentFlag.AlignRight)
             
             total_layout.addWidget(total_label)
@@ -566,15 +620,10 @@ class ClienteDetalleWindow(QWidget):
         
         adeudo_frame.setLayout(adeudo_layout)
         layout.addWidget(adeudo_frame)
-
-    def hex_to_rgb(self, hex_color):
-        """Convertir color hex a RGB"""
-        hex_color = hex_color.lstrip('#')
-        return ', '.join(str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4))
         
     def create_control_panel(self, parent):
         """Crea el panel de control lateral usando ModernCard"""
-        control_card = ModernCard()
+        control_card = ModernCard(self.theme_manager)
         control_card.setFixedWidth(320)
         control_layout = QVBoxLayout()
         control_layout.setContentsMargins(20, 15, 20, 15)
@@ -598,12 +647,12 @@ class ClienteDetalleWindow(QWidget):
         control_layout.addLayout(title_layout)
         
         # Botón agregar nota
-        add_note_btn = ModernButton("📝 Agregar Nota")
+        add_note_btn = ModernButton("📝 Agregar Nota", self.theme_manager)
         add_note_btn.clicked.connect(self.show_note_dialog)
         control_layout.addWidget(add_note_btn)
         
         # Botón agregar teléfono
-        add_phone_btn = ModernButton("📞 Teléfono")
+        add_phone_btn = ModernButton("📞 Teléfono", self.theme_manager)
         add_phone_btn.clicked.connect(self.show_telefono_dialog)
         control_layout.addWidget(add_phone_btn)
         
@@ -615,35 +664,35 @@ class ClienteDetalleWindow(QWidget):
         ]
         
         for btn_text, note_text in quick_notes:
-            btn = ModernButton(btn_text)
+            btn = ModernButton(btn_text, self.theme_manager)
             btn.clicked.connect(lambda checked, text=note_text: self.create_quick_note(text))
             control_layout.addWidget(btn)
         
         # Separador
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
+        separator.setStyleSheet(f"background: rgba({self.hex_to_rgb(self.get_current_colors()['TEXT_SECONDARY'])}, 0.5); margin: 10px 0;")
         control_layout.addWidget(separator)
         
         # Botón fecha promesa
-        calendar_btn = ModernButton("📅 Fecha Promesa")
+        calendar_btn = ModernButton("📅 Fecha Promesa", self.theme_manager)
         calendar_btn.clicked.connect(self.show_calendar_dialog)
         control_layout.addWidget(calendar_btn)
         
-        # Separador
+# Separador
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.Shape.HLine)
-        separator2.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
+        separator2.setStyleSheet(f"background: rgba({self.hex_to_rgb(self.get_current_colors()['TEXT_SECONDARY'])}, 0.5); margin: 10px 0;")
         control_layout.addWidget(separator2)
         
         # Botón empresa
-        self.company_btn = ModernButton("🏢 Estado Empresa")
+        self.company_btn = ModernButton("🏢 Estado Empresa", self.theme_manager)
         self.update_company_button()
         self.company_btn.clicked.connect(self.toggle_company)
         control_layout.addWidget(self.company_btn)
         
         # Botón buró
-        self.buro_btn = ModernButton("⚠️ Estado Buró")
+        self.buro_btn = ModernButton("⚠️ Estado Buró", self.theme_manager)
         self.update_buro_button()
         self.buro_btn.clicked.connect(self.toggle_buro)
         control_layout.addWidget(self.buro_btn)
@@ -651,16 +700,16 @@ class ClienteDetalleWindow(QWidget):
         # Separador
         separator3 = QFrame()
         separator3.setFrameShape(QFrame.Shape.HLine)
-        separator3.setStyleSheet("background: rgba(255, 255, 255, 0.2); margin: 10px 0;")
+        separator3.setStyleSheet(f"background: rgba({self.hex_to_rgb(self.get_current_colors()['TEXT_SECONDARY'])}, 0.5); margin: 10px 0;")
         control_layout.addWidget(separator3)
         
         # Botón WhatsApp
-        whatsapp_btn = ModernButton("💬 WhatsApp")
+        whatsapp_btn = ModernButton("💬 WhatsApp", self.theme_manager)
         whatsapp_btn.clicked.connect(self.abrir_whatsapp)
         control_layout.addWidget(whatsapp_btn)
         
         # Botón llamada
-        phone_btn = ModernButton("📞 Llamar")
+        phone_btn = ModernButton("📞 Llamar", self.theme_manager)
         phone_btn.clicked.connect(self.realizar_llamada)
         control_layout.addWidget(phone_btn)
         
@@ -674,6 +723,8 @@ class ClienteDetalleWindow(QWidget):
         """Carga las notas del cliente - VERSIÓN ULTRA SIMPLE"""
         try:
             logging.info(f"=== CARGANDO NOTAS PARA CLIENTE: {self.client_id} ===")
+            colors = self.get_current_colors()
+            theme = self.theme_manager.get_current_theme()
             
             # Consulta directa a la base de datos
             conn = get_db_connection()
@@ -705,7 +756,7 @@ class ClienteDetalleWindow(QWidget):
             if not rows:
                 no_notes_label = QLabel("📝 No hay notas para este cliente")
                 no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                no_notes_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 30px; font-size: 14px;")
+                no_notes_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']}; font-style: italic; padding: 30px; font-size: 14px;")
                 self.notes_layout.addWidget(no_notes_label)
                 logging.info("No hay notas - mostrando mensaje")
                 return
@@ -718,16 +769,16 @@ class ClienteDetalleWindow(QWidget):
                 note_frame = QFrame()
                 note_frame.setStyleSheet(f"""
                     QFrame {{
-                        background: rgba(255, 255, 255, 0.08);
-                        border: 1px solid rgba(255, 255, 255, 0.15);
+                        background: {theme['card_bg_alpha']};
+                        border: 1px solid {theme['border_alpha']};
                         border-radius: 10px;
                         margin: 4px;
                         padding: 12px;
                         backdrop-filter: blur(10px);
                     }}
                     QFrame:hover {{
-                        background: rgba(255, 255, 255, 0.12);
-                        border-color: {self.BRIGHT_CYAN};
+                        background: {theme['hover_alpha']};
+                        border-color: {colors['BRIGHT_CYAN']};
                     }}
                 """)
                 
@@ -748,7 +799,7 @@ class ClienteDetalleWindow(QWidget):
                 
                 header_label = QLabel(f"{fecha_str}")
                 header_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-                header_label.setStyleSheet(f"color: {self.BRIGHT_CYAN};")
+                header_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']};")
                 
                 # Ícono de usuario
                 user_icon = QLabel("👤")
@@ -756,7 +807,7 @@ class ClienteDetalleWindow(QWidget):
                 
                 user_label = QLabel(usuario_str)
                 user_label.setFont(QFont("Segoe UI", 9))
-                user_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic;")
+                user_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']}; font-style: italic;")
                 
                 header_layout.addWidget(date_icon)
                 header_layout.addWidget(header_label)
@@ -769,12 +820,12 @@ class ClienteDetalleWindow(QWidget):
                 text_label.setWordWrap(True)
                 text_label.setFont(QFont("Segoe UI", 11))
                 text_label.setStyleSheet(f"""
-                    color: {self.TEXT_PRIMARY}; 
+                    color: {colors['TEXT_PRIMARY']}; 
                     margin-top: 5px; 
                     padding: 8px; 
-                    background: rgba(255, 255, 255, 0.05); 
+                    background: {theme['card_bg_alpha']}; 
                     border-radius: 6px;
-                    border-left: 3px solid {self.BRIGHT_CYAN};
+                    border-left: 3px solid {colors['BRIGHT_CYAN']};
                 """)
                 
                 note_layout.addLayout(header_layout)
@@ -793,139 +844,11 @@ class ClienteDetalleWindow(QWidget):
             logging.error(f"ERROR EN load_client_notes: {e}")
             import traceback
             logging.error(traceback.format_exc())
-        
-    def create_timeline_frame_if_missing(self):
-        """Crea el componente de timeline si no existe"""
-        if not hasattr(self, 'notes_widget') or not hasattr(self, 'notes_layout'):
-            logging.warning("Recreando componente de timeline que faltaba")
-            
-            # Buscar el frame de timeline en el layout principal
-            main_widget = self.findChild(QWidget)
-            if main_widget:
-                layout = main_widget.layout()
-                if layout and layout.count() >= 2:
-                    # Asumir que timeline es el segundo item
-                    self.create_timeline_frame(layout)
-        
-    def refresh_notes_display(self, notes):
-        """Actualiza la visualización de las notas - VERSIÓN MEJORADA"""
-        try:
-            logging.info(f"refresh_notes_display llamada con {len(notes)} notas")
-            
-            # Verificación doble de notes_layout
-            if not hasattr(self, 'notes_layout') or not self.notes_layout:
-                logging.error("notes_layout no existe en refresh_notes_display")
-                return
-            
-            # Limpiar notas existentes de forma segura
-            while self.notes_layout.count():
-                child = self.notes_layout.takeAt(0)
-                if child and child.widget():
-                    widget = child.widget()
-                    widget.setParent(None)
-                    widget.deleteLater()
-            
-            # Verificar que tenemos notas para mostrar
-            if not notes:
-                # Mostrar mensaje de "no hay notas"
-                no_notes_label = QLabel("📝 No hay notas registradas para este cliente")
-                no_notes_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                no_notes_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic; padding: 30px; font-size: 14px;")
-                self.notes_layout.addWidget(no_notes_label)
-                self.notes_layout.addStretch()
-                return
-            
-            # Agregar nuevas notas
-            for idx, note in enumerate(notes):
-                try:
-                    logging.info(f"Agregando nota {idx}: {note.get('text', 'Sin texto')[:50]}...")
-                    
-                    note_frame = QFrame()
-                    note_frame.setStyleSheet(f"""
-                        QFrame {{
-                            background: rgba(255, 255, 255, 0.08);
-                            border: 1px solid rgba(255, 255, 255, 0.15);
-                            border-radius: 10px;
-                            margin: 4px;
-                            padding: 12px;
-                            backdrop-filter: blur(10px);
-                        }}
-                        QFrame:hover {{
-                            background: rgba(255, 255, 255, 0.12);
-                            border-color: {self.BRIGHT_CYAN};
-                        }}
-                    """)
-                    
-                    note_layout = QVBoxLayout()
-                    note_layout.setContentsMargins(8, 8, 8, 8)
-                    note_layout.setSpacing(8)
-                    
-                    # Header con fecha y usuario
-                    header_layout = QHBoxLayout()
-                    
-                    # Formatear timestamp
-                    timestamp = note.get('timestamp', datetime.now())
-                    if isinstance(timestamp, datetime):
-                        timestamp_str = timestamp.strftime('%d/%m/%Y %H:%M')
-                    else:
-                        timestamp_str = str(timestamp)
-                    
-                    date_label = QLabel(f"📅 {timestamp_str}")
-                    date_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-                    date_label.setStyleSheet(f"color: {self.BRIGHT_CYAN};")
-                    
-                    user_label = QLabel(f"👤 {note.get('user_name', 'Sistema')}")
-                    user_label.setFont(QFont("Segoe UI", 9))
-                    user_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; font-style: italic;")
-                    
-                    header_layout.addWidget(date_label)
-                    header_layout.addStretch()
-                    header_layout.addWidget(user_label)
-                    
-                    # Texto de la nota
-                    text_label = QLabel(note.get('text', 'Sin texto'))
-                    text_label.setWordWrap(True)
-                    text_label.setFont(QFont("Segoe UI", 11))
-                    text_label.setStyleSheet(f"""
-                        color: {self.TEXT_PRIMARY}; 
-                        margin-top: 5px; 
-                        padding: 8px; 
-                        background: rgba(255, 255, 255, 0.05); 
-                        border-radius: 6px;
-                        border-left: 3px solid {self.BRIGHT_CYAN};
-                    """)
-                    
-                    note_layout.addLayout(header_layout)
-                    note_layout.addWidget(text_label)
-                    
-                    note_frame.setLayout(note_layout)
-                    self.notes_layout.addWidget(note_frame)
-                    
-                    logging.info(f"Nota {idx} agregada correctamente")
-                    
-                except Exception as e:
-                    logging.error(f"Error agregando nota {idx}: {e}")
-                    continue
-            
-            # Agregar espaciador al final
-            self.notes_layout.addStretch()
-            
-            # Forzar actualización visual
-            if hasattr(self, 'notes_widget'):
-                self.notes_widget.updateGeometry()
-                self.notes_widget.update()
-            
-            logging.info("refresh_notes_display completado exitosamente")
-                
-        except Exception as e:
-            logging.error(f"Error en refresh_notes_display: {e}")
-            import traceback
-            logging.error(f"Traceback: {traceback.format_exc()}")
-
+    
     def show_note_dialog(self):
         """Muestra el diálogo para agregar una nota con manejo completo de errores"""
         try:
-            dialog = NoteDialog(self)
+            dialog = NoteDialog(self, self.theme_manager)
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 note_text = dialog.get_note_text()
                 if not note_text or not note_text.strip():
@@ -963,15 +886,13 @@ class ClienteDetalleWindow(QWidget):
         
     def show_telefono_dialog(self):
         """Muestra el diálogo para agregar/actualizar teléfono"""
-        dialog = TelefonoDialog(self, self.client_data.get('telefono3', ''))
+        dialog = TelefonoDialog(self, self.theme_manager, self.client_data.get('telefono3', ''))
         if dialog.exec() == QDialog.DialogCode.Accepted:
             nuevo_telefono = dialog.get_telefono()
             if nuevo_telefono and update_telefono3(self.client_id, nuevo_telefono):
                 # Actualizar datos en memoria
                 self.client_data['telefono3'] = format_phone_number(nuevo_telefono)
                 
-                # En lugar de recrear el frame, simplemente informar al usuario
-                # que el cambio se verá al reabrir la ventana
                 QMessageBox.information(self, "Éxito", 
                     "Teléfono actualizado correctamente.\nLos cambios se verán al reabrir la ventana de detalles.")
                 
@@ -982,39 +903,10 @@ class ClienteDetalleWindow(QWidget):
                 
             else:
                 QMessageBox.warning(self, "Error", "No se pudo actualizar el teléfono")
-    
-    def recreate_cliente_frame(self):
-        """Recrear el frame del cliente para mostrar los cambios"""
-        try:
-            # Buscar el layout principal y recrear el frame del cliente
-            main_widget = None
-            splitter = self.layout().itemAt(0).widget()
-            
-            if splitter and hasattr(splitter, 'widget'):
-                main_widget = splitter.widget(0)
-            
-            if main_widget and hasattr(main_widget, 'layout'):
-                main_layout = main_widget.layout()
-                
-                # Remover el frame del cliente existente (primer item)
-                if main_layout and main_layout.count() > 0:
-                    old_widget = main_layout.itemAt(0)
-                    if old_widget and old_widget.widget():
-                        widget_to_remove = old_widget.widget()
-                        widget_to_remove.setParent(None)
-                        widget_to_remove.deleteLater()
-                
-                # Recrear el frame del cliente al inicio del layout
-                self.create_cliente_frame(main_layout)
-                
-        except Exception as e:
-            logging.error(f"Error en recreate_cliente_frame: {e}")
-            # Si hay error, mostrar mensaje pero no crashear
-            QMessageBox.information(self, "Información", "Información del cliente actualizada (requiere reabrir ventana para ver cambios)")
                 
     def show_calendar_dialog(self):
         """Muestra el diálogo para seleccionar fecha de promesa"""
-        dialog = CalendarDialog(self)
+        dialog = CalendarDialog(self, self.theme_manager)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_date, payment_method = dialog.get_selection()
             if update_promise_date(self.client_id, selected_date):
@@ -1139,7 +1031,6 @@ class ClienteDetalleWindow(QWidget):
         finally:
             conn.close()
     
-    # Métodos de base de datos (simplificados)
     def get_company_state(self, client_id):
         """Obtiene el estado de empresa"""
         try:
@@ -1304,15 +1195,16 @@ class ClienteDetalleWindow(QWidget):
             
     def show_ticket_detail(self, ticket_data):
         """Muestra los detalles del ticket"""
-        dialog = TicketDetailDialog(self, ticket_data)
+        dialog = TicketDetailDialog(self, self.theme_manager, ticket_data)
         dialog.exec()
 
 
-# Diálogos auxiliares con estilo glassmorphism
+# Diálogos auxiliares con estilo glassmorphism adaptativo
 class NoteDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, theme_manager):
         super().__init__(parent)
         self.parent = parent
+        self.theme_manager = theme_manager
         self.setWindowTitle("Agregar Nota")
         self.setFixedSize(450, 250)
         
@@ -1323,59 +1215,7 @@ class NoteDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 250) // 2
             self.move(x, y)
         
-        # Aplicar estilo glassmorphism
-        self.setStyleSheet(f"""
-            QDialog {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
-                    stop:0.7 #16213e, stop:1 #0a0a0a);
-                color: #ffffff;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }}
-            
-            QLabel {{
-                background: transparent;
-                color: #ffffff;
-            }}
-            
-            QTextEdit {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: #ffffff;
-                padding: 8px;
-                font-size: 11px;
-                selection-background-color: #00b4d8;
-            }}
-            
-            QTextEdit:focus {{
-                border: 2px solid #00b4d8;
-                background: rgba(255, 255, 255, 0.12);
-            }}
-            
-            QPushButton {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                padding: 10px 20px;
-                font-weight: 600;
-            }}
-            
-            QPushButton:hover {{
-                background: rgba(255, 255, 255, 0.15);
-                border-color: #00b4d8;
-            }}
-            
-            QPushButton[class="danger"] {{
-                background: rgba(239, 68, 68, 0.8);
-                border-color: #ef4444;
-            }}
-            
-            QPushButton[class="danger"]:hover {{
-                background: rgba(239, 68, 68, 0.9);
-            }}
-        """)
+        self.apply_theme_styles()
         
         layout = QVBoxLayout()
         layout.setSpacing(15)
@@ -1383,7 +1223,7 @@ class NoteDialog(QDialog):
         # Título
         title_label = QLabel("📝 Agregar nueva nota")
         title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #00b4d8;")
+        title_label.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['BRIGHT_CYAN']};")
         layout.addWidget(title_label)
         
         # Campo de texto
@@ -1395,7 +1235,7 @@ class NoteDialog(QDialog):
         
         # Contador de caracteres
         self.char_count = QLabel("0 caracteres")
-        self.char_count.setStyleSheet("color: #a0a0a0; font-size: 10px;")
+        self.char_count.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['TEXT_SECONDARY']}; font-size: 10px;")
         layout.addWidget(self.char_count)
         
         # Conectar el contador
@@ -1404,10 +1244,10 @@ class NoteDialog(QDialog):
         # Botones
         button_layout = QHBoxLayout()
         
-        cancel_btn = QPushButton("❌ Cancelar")
+        cancel_btn = ModernButton("❌ Cancelar", self.theme_manager)
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("💾 Guardar Nota")
+        save_btn = ModernButton("💾 Guardar Nota", self.theme_manager)
         save_btn.clicked.connect(self.accept)
         save_btn.setProperty("class", "danger")
         save_btn.setDefault(True)
@@ -1420,6 +1260,40 @@ class NoteDialog(QDialog):
         
         # Enfocar el campo de texto
         self.text_edit.setFocus()
+
+    def apply_theme_styles(self):
+        """Aplica estilos según el tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {theme['TEXT_PRIMARY']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: {theme['TEXT_PRIMARY']};
+            }}
+            
+            QTextEdit {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                color: {theme['TEXT_PRIMARY']};
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: {theme['BRIGHT_CYAN']};
+            }}
+            
+            QTextEdit:focus {{
+                border: 2px solid {theme['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
+            }}
+        """)
     
     def update_char_count(self):
         count = len(self.text_edit.toPlainText())
@@ -1430,9 +1304,10 @@ class NoteDialog(QDialog):
 
 
 class TelefonoDialog(QDialog):
-    def __init__(self, parent, current_phone=""):
+    def __init__(self, parent, theme_manager, current_phone=""):
         super().__init__(parent)
         self.parent = parent
+        self.theme_manager = theme_manager
         self.setWindowTitle("Agregar/Actualizar Teléfono")
         self.setFixedSize(400, 180)
         
@@ -1443,59 +1318,7 @@ class TelefonoDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 180) // 2
             self.move(x, y)
         
-        # Aplicar estilo glassmorphism
-        self.setStyleSheet(f"""
-            QDialog {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
-                    stop:0.7 #16213e, stop:1 #0a0a0a);
-                color: #ffffff;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }}
-            
-            QLabel {{
-                background: transparent;
-                color: #ffffff;
-            }}
-            
-            QLineEdit {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: #ffffff;
-                padding: 8px;
-                font-size: 11px;
-                selection-background-color: #00b4d8;
-            }}
-            
-            QLineEdit:focus {{
-                border: 2px solid #00b4d8;
-                background: rgba(255, 255, 255, 0.12);
-            }}
-            
-            QPushButton {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                padding: 10px 20px;
-                font-weight: 600;
-            }}
-            
-            QPushButton:hover {{
-                background: rgba(255, 255, 255, 0.15);
-                border-color: #00b4d8;
-            }}
-            
-            QPushButton[class="danger"] {{
-                background: rgba(239, 68, 68, 0.8);
-                border-color: #ef4444;
-            }}
-            
-            QPushButton[class="danger"]:hover {{
-                background: rgba(239, 68, 68, 0.9);
-            }}
-        """)
+        self.apply_theme_styles()
         
         layout = QVBoxLayout()
         layout.setSpacing(15)
@@ -1503,12 +1326,12 @@ class TelefonoDialog(QDialog):
         # Título
         title_label = QLabel("📞 Agregar/Actualizar Teléfono")
         title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #00b4d8;")
+        title_label.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['BRIGHT_CYAN']};")
         layout.addWidget(title_label)
         
         if current_phone and current_phone.strip():
             current_label = QLabel(f"Teléfono actual: {current_phone}")
-            current_label.setStyleSheet("color: #fb923c; font-weight: bold;")
+            current_label.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['WARNING_ORANGE']}; font-weight: bold;")
             layout.addWidget(current_label)
         
         layout.addWidget(QLabel("Nuevo teléfono:"))
@@ -1519,10 +1342,10 @@ class TelefonoDialog(QDialog):
         # Botones
         button_layout = QHBoxLayout()
         
-        cancel_btn = QPushButton("❌ Cancelar")
+        cancel_btn = ModernButton("❌ Cancelar", self.theme_manager)
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("💾 Guardar")
+        save_btn = ModernButton("💾 Guardar", self.theme_manager)
         save_btn.clicked.connect(self.accept)
         save_btn.setProperty("class", "danger")
         save_btn.setDefault(True)
@@ -1536,143 +1359,50 @@ class TelefonoDialog(QDialog):
         # Seleccionar todo el texto al abrir
         self.phone_edit.selectAll()
         self.phone_edit.setFocus()
-        
-    def get_telefono(self):
-        return self.phone_edit.text().strip()
 
-
-class TicketDetailDialog(QDialog):
-    def __init__(self, parent, ticket_data):
-        super().__init__(parent)
-        self.parent = parent
-        self.setWindowTitle(f"🎫 Ticket #{ticket_data['ticket']}")
-        self.setFixedSize(450, 600)
+    def apply_theme_styles(self):
+        """Aplica estilos según el tema actual"""
+        theme = self.theme_manager.get_current_theme()
         
-        # Aplicar estilo glassmorphism
         self.setStyleSheet(f"""
             QDialog {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
-                    stop:0.7 #16213e, stop:1 #0a0a0a);
-                color: #ffffff;
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {theme['TEXT_PRIMARY']};
                 font-family: 'Segoe UI', Arial, sans-serif;
             }}
             
             QLabel {{
                 background: transparent;
-                color: #ffffff;
+                color: {theme['TEXT_PRIMARY']};
             }}
             
-            QScrollArea {{
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-            }}
-            
-            QScrollArea QWidget {{
-                background: transparent;
-            }}
-            
-            QScrollBar:vertical {{
-                background: rgba(255, 255, 255, 0.05);
-                width: 8px;
-                border-radius: 4px;
-                margin: 0;
-            }}
-            
-            QScrollBar::handle:vertical {{
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                min-height: 20px;
-            }}
-            
-            QPushButton {{
-                background: rgba(239, 68, 68, 0.8);
-                color: #ffffff;
-                border: 1px solid #ef4444;
+            QLineEdit {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
                 border-radius: 8px;
-                padding: 10px 20px;
-                font-weight: 600;
+                color: {theme['TEXT_PRIMARY']};
+                padding: 8px;
+                font-size: 11px;
+                selection-background-color: {theme['BRIGHT_CYAN']};
             }}
             
-            QPushButton:hover {{
-                background: rgba(239, 68, 68, 0.9);
+            QLineEdit:focus {{
+                border: 2px solid {theme['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
             }}
         """)
         
-        layout = QVBoxLayout()
-        layout.setSpacing(15)
-        
-        # Título
-        title_label = QLabel(f"🎫 Detalles del Ticket #{ticket_data['ticket']}")
-        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #00b4d8; text-align: center;")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title_label)
-        
-        # Área de scroll para el contenido del ticket
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        
-        # Widget contenedor
-        content_widget = QWidget()
-        content_layout = QVBoxLayout()
-        content_layout.setSpacing(5)
-        
-        # Procesar y mostrar el contenido del ticket
-        lines = ticket_data['datos'].split('\r\n')
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Crear etiqueta para cada línea
-            line_label = QLabel(line)
-            line_label.setFont(QFont("Courier New", 9))
-            line_label.setWordWrap(True)
-            line_label.setStyleSheet("background: transparent;")
-            
-            # Estilos especiales para diferentes tipos de líneas
-            if "GARCIA RINES" in line:
-                line_label.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
-                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                line_label.setStyleSheet("color: #00b4d8; font-weight: bold;")
-            elif line.startswith("TICKET:") or line.startswith("CLIENTE:"):
-                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
-                line_label.setStyleSheet("color: #4ade80; font-weight: bold;")
-            elif "CANT" in line and "DESCRIPCION" in line:
-                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
-                line_label.setStyleSheet("color: #fb923c; font-weight: bold;")
-            elif "ARTICULOS" in line or "IMPORTE:" in line or "ADEUDA:" in line:
-                line_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
-                line_label.setStyleSheet("color: #ef4444; font-weight: bold;")
-            elif "DEBO Y PAGARE" in line or "ACEPTO" in line:
-                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
-                line_label.setStyleSheet("color: #a855f7; font-weight: bold;")
-            else:
-                line_label.setStyleSheet("color: #ffffff;")
-            
-            content_layout.addWidget(line_label)
-        
-        content_widget.setLayout(content_layout)
-        scroll_area.setWidget(content_widget)
-        
-        layout.addWidget(scroll_area)
-        
-        # Botón cerrar
-        close_btn = QPushButton("🔒 Cerrar")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-        
-        self.setLayout(layout)
+    def get_telefono(self):
+        return self.phone_edit.text().strip()
+
 
 class CalendarDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, theme_manager):
         super().__init__(parent)
         self.parent = parent
+        self.theme_manager = theme_manager
         self.setWindowTitle("📅 Seleccionar Fecha de Promesa")
         self.setFixedSize(400, 480)
         
@@ -1693,166 +1423,7 @@ class CalendarDialog(QDialog):
             y = parent_geo.y() + (parent_geo.height() - 480) // 2
             self.move(x, y)
         
-        # APLICAR ESTILO GLASSMORPHISM
-        self.setStyleSheet(f"""
-            QDialog {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0a0a0a, stop:0.3 #1a1a2e, 
-                    stop:0.7 #16213e, stop:1 #0a0a0a);
-                color: #ffffff;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }}
-            
-            QLabel {{
-                color: #ffffff;
-                background-color: transparent;
-            }}
-            
-            QComboBox {{
-                background: rgba(255, 255, 255, 0.08);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                padding: 8px;
-                border-radius: 8px;
-                font-size: 11px;
-            }}
-            
-            QComboBox:hover {{
-                border-color: #00b4d8;
-                background: rgba(255, 255, 255, 0.12);
-            }}
-            
-            QComboBox::drop-down {{
-                border: none;
-                background: transparent;
-            }}
-            
-            QComboBox::down-arrow {{
-                image: none;
-                border: none;
-                width: 0px;
-                height: 0px;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #ffffff;
-            }}
-            
-            QComboBox QAbstractItemView {{
-                background: rgba(16, 33, 62, 0.95);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                selection-background-color: #00b4d8;
-                selection-color: white;
-            }}
-            
-            QPushButton {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                padding: 10px 20px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 11px;
-            }}
-            
-            QPushButton:hover {{
-                background: rgba(255, 255, 255, 0.15);
-                border-color: #00b4d8;
-            }}
-            
-            QPushButton[class="danger"] {{
-                background: rgba(239, 68, 68, 0.8);
-                color: white;
-                border-color: #ef4444;
-            }}
-            
-            QPushButton[class="danger"]:hover {{
-                background: rgba(239, 68, 68, 0.9);
-            }}
-            
-            QCalendarWidget {{
-                background: rgba(255, 255, 255, 0.08);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-                selection-background-color: #00b4d8;
-            }}
-            
-            QCalendarWidget QWidget#qt_calendar_navigationbar {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-            }}
-            
-            QCalendarWidget QToolButton {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                padding: 6px;
-                margin: 2px;
-                border-radius: 6px;
-                font-weight: bold;
-            }}
-            
-            QCalendarWidget QToolButton:hover {{
-                background: rgba(0, 180, 216, 0.8);
-                color: white;
-                border-color: #00b4d8;
-            }}
-            
-            QCalendarWidget QSpinBox {{
-                background: rgba(255, 255, 255, 0.08);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                padding: 4px;
-                border-radius: 4px;
-            }}
-            
-            QCalendarWidget QTableView {{
-                background: transparent;
-                color: #ffffff;
-                gridline-color: rgba(255, 255, 255, 0.1);
-                selection-background-color: #00b4d8;
-                selection-color: white;
-            }}
-            
-            QCalendarWidget QHeaderView::section {{
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 8px;
-                font-weight: 600;
-                font-size: 10px;
-            }}
-            
-            QCalendarWidget QAbstractItemView::item {{
-                color: #ffffff;
-                background: transparent;
-                padding: 8px;
-            }}
-            
-            QCalendarWidget QAbstractItemView::item:hover {{
-                background: rgba(0, 180, 216, 0.3);
-                color: #ffffff;
-            }}
-            
-            QCalendarWidget QAbstractItemView::item:selected {{
-                background: #00b4d8;
-                color: white;
-                font-weight: bold;
-            }}
-            
-            QCalendarWidget QAbstractItemView::item:disabled {{
-                color: #666666;
-                background: rgba(255, 255, 255, 0.05);
-            }}
-            
-            QFrame[frameShape="4"] {{
-                background: rgba(255, 255, 255, 0.2);
-                max-height: 1px;
-                margin: 10px 0;
-            }}
-        """)
+        self.apply_theme_styles()
         
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -1862,7 +1433,7 @@ class CalendarDialog(QDialog):
         title_label = QLabel("📅 Seleccione la fecha de promesa")
         title_label.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("color: #00b4d8;")
+        title_label.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['BRIGHT_CYAN']};")
         layout.addWidget(title_label)
         
         # Calendario
@@ -1899,10 +1470,10 @@ class CalendarDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
-        cancel_btn = QPushButton("❌ Cancelar")
+        cancel_btn = ModernButton("❌ Cancelar", self.theme_manager)
         cancel_btn.clicked.connect(self.reject)
         
-        save_btn = QPushButton("✅ Guardar")
+        save_btn = ModernButton("✅ Guardar", self.theme_manager)
         save_btn.setProperty("class", "danger")
         save_btn.clicked.connect(self.accept)
         save_btn.setDefault(True)
@@ -1915,9 +1486,205 @@ class CalendarDialog(QDialog):
         
         # Establecer foco en el calendario
         self.calendar.setFocus()
+
+    def apply_theme_styles(self):
+        """Aplica estilos según el tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {theme['TEXT_PRIMARY']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                color: {theme['TEXT_PRIMARY']};
+                background-color: transparent;
+            }}
+            
+            QComboBox {{
+                background: {theme['card_bg_alpha']};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                padding: 8px;
+                border-radius: 8px;
+                font-size: 11px;
+            }}
+            
+            QComboBox:hover {{
+                border-color: {theme['BRIGHT_CYAN']};
+                background: {theme['hover_alpha']};
+            }}
+            
+            QComboBox QAbstractItemView {{
+                background: {theme['CARD_BG']};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                selection-background-color: {theme['BRIGHT_CYAN']};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget {{
+                background: {theme['card_bg_alpha']};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 12px;
+                selection-background-color: {theme['BRIGHT_CYAN']};
+            }}
+            
+            QCalendarWidget QTableView {{
+                background: transparent;
+                color: {theme['TEXT_PRIMARY']};
+                gridline-color: {theme['border_alpha']};
+                selection-background-color: {theme['BRIGHT_CYAN']};
+                selection-color: white;
+            }}
+            
+            QCalendarWidget QHeaderView::section {{
+                background: {theme['card_bg_alpha']};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {theme['border_alpha']};
+                padding: 8px;
+                font-weight: 600;
+                font-size: 10px;
+            }}
+            
+            QFrame[frameShape="4"] {{
+                background: {theme['border_alpha']};
+                max-height: 1px;
+                margin: 10px 0;
+            }}
+        """)
     
     def get_selection(self):
         qdate = self.calendar.selectedDate()
         python_date = date(qdate.year(), qdate.month(), qdate.day())
         payment_method = self.payment_combo.currentText()
         return python_date, payment_method
+
+
+class TicketDetailDialog(QDialog):
+    def __init__(self, parent, theme_manager, ticket_data):
+        super().__init__(parent)
+        self.parent = parent
+        self.theme_manager = theme_manager
+        self.setWindowTitle(f"🎫 Ticket #{ticket_data['ticket']}")
+        self.setFixedSize(450, 600)
+        
+        self.apply_theme_styles()
+        
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        # Título
+        title_label = QLabel(f"🎫 Detalles del Ticket #{ticket_data['ticket']}")
+        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        title_label.setStyleSheet(f"color: {self.theme_manager.get_current_theme()['BRIGHT_CYAN']}; text-align: center;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Área de scroll para el contenido del ticket
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        
+        # Widget contenedor
+        content_widget = QWidget()
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(5)
+        
+        # Procesar y mostrar el contenido del ticket
+        lines = ticket_data['datos'].split('\r\n')
+        colors = self.theme_manager.get_current_theme()
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Crear etiqueta para cada línea
+            line_label = QLabel(line)
+            line_label.setFont(QFont("Courier New", 9))
+            line_label.setWordWrap(True)
+            line_label.setStyleSheet("background: transparent;")
+            
+            # Estilos especiales para diferentes tipos de líneas
+            if "GARCIA RINES" in line:
+                line_label.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
+                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                line_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; font-weight: bold;")
+            elif line.startswith("TICKET:") or line.startswith("CLIENTE:"):
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet(f"color: {colors['SUCCESS_GREEN']}; font-weight: bold;")
+            elif "CANT" in line and "DESCRIPCION" in line:
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet(f"color: {colors['WARNING_ORANGE']}; font-weight: bold;")
+            elif "ARTICULOS" in line or "IMPORTE:" in line or "ADEUDA:" in line:
+                line_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet(f"color: {colors['DANGER_RED']}; font-weight: bold;")
+            elif "DEBO Y PAGARE" in line or "ACEPTO" in line:
+                line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                line_label.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
+                line_label.setStyleSheet(f"color: {colors['PROMISE_PURPLE']}; font-weight: bold;")
+            else:
+                line_label.setStyleSheet(f"color: {colors['TEXT_PRIMARY']};")
+            
+            content_layout.addWidget(line_label)
+        
+        content_widget.setLayout(content_layout)
+        scroll_area.setWidget(content_widget)
+        
+        layout.addWidget(scroll_area)
+        
+        # Botón cerrar
+        close_btn = ModernButton("🔒 Cerrar", self.theme_manager)
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+        
+        self.setLayout(layout)
+
+    def apply_theme_styles(self):
+        """Aplica estilos según el tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {theme['TEXT_PRIMARY']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QLabel {{
+                background: transparent;
+                color: {theme['TEXT_PRIMARY']};
+            }}
+            
+            QScrollArea {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 12px;
+            }}
+            
+            QScrollArea QWidget {{
+                background: transparent;
+            }}
+            
+            QScrollBar:vertical {{
+                background: {theme['card_bg_alpha']};
+                width: 8px;
+                border-radius: 4px;
+                margin: 0;
+            }}
+            
+            QScrollBar::handle:vertical {{
+                background: {theme['border_alpha']};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+        """)# cliente_detalle.py

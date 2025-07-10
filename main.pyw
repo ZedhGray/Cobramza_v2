@@ -24,6 +24,9 @@ from database import (get_clients_data, get_ventas_data, get_client_states,
 from cliente_detalle import ClienteDetalleWindow
 from login_system import LoadingSplash
 
+# IMPORTAR EL NUEVO SISTEMA DE TEMAS
+from theme_manager import ThemeManager, SettingsDialog, ModernCard as ThemedCard, ModernButton as ThemedButton
+
 # Configuración de logging
 logging.basicConfig(
     level=logging.INFO,
@@ -39,13 +42,14 @@ try:
 except ImportError:
     UpdaterDialog = None
 
-version = "v2.3"
+version = "v2.4"
 
 class ModernButton(QPushButton):
-    """Botón moderno con efectos de glassmorphism - tamaño optimizado"""
-    def __init__(self, text, parent=None):
+    """Botón moderno que se adapta al tema actual"""
+    def __init__(self, text, theme_manager, parent=None):
         super().__init__(text, parent)
-        self.setFixedHeight(35)  # Más pequeño
+        self.theme_manager = theme_manager
+        self.setFixedHeight(35)
         self.setFixedWidth(200)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
@@ -53,31 +57,49 @@ class ModernButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Crear gradiente de fondo
+        theme = self.theme_manager.get_current_theme()
+        
+        # Crear gradiente de fondo adaptativo
         gradient = QLinearGradient(0, 0, 0, self.height())
-        if self.isChecked():
-            gradient.setColorAt(0, QColor(255, 255, 255, 25))
-            gradient.setColorAt(1, QColor(255, 255, 255, 15))
+        
+        if self.theme_manager.is_dark_theme():
+            if self.isChecked():
+                gradient.setColorAt(0, QColor(255, 255, 255, 25))
+                gradient.setColorAt(1, QColor(255, 255, 255, 15))
+                text_color = QColor(255, 255, 255, 230)
+            else:
+                gradient.setColorAt(0, QColor(255, 255, 255, 10))
+                gradient.setColorAt(1, QColor(255, 255, 255, 5))
+                text_color = QColor(255, 255, 255, 180)
+            border_color = QColor(255, 255, 255, 30)
         else:
-            gradient.setColorAt(0, QColor(255, 255, 255, 10))
-            gradient.setColorAt(1, QColor(255, 255, 255, 5))
+            if self.isChecked():
+                gradient.setColorAt(0, QColor(25, 118, 210, 200))
+                gradient.setColorAt(1, QColor(25, 118, 210, 150))
+                text_color = QColor(255, 255, 255, 255)
+            else:
+                gradient.setColorAt(0, QColor(255, 255, 255, 200))
+                gradient.setColorAt(1, QColor(248, 249, 250, 150))
+                text_color = QColor(33, 37, 41, 200)
+            border_color = QColor(0, 0, 0, 50)
         
         # Dibujar fondo con bordes redondeados
         painter.setBrush(gradient)
-        painter.setPen(QColor(255, 255, 255, 30))
+        painter.setPen(border_color)
         path = QPainterPath()
-        path.addRoundedRect(0, 0, self.width(), self.height(), 10, 10)  # Bordes más pequeños
+        path.addRoundedRect(0, 0, self.width(), self.height(), 10, 10)
         painter.drawPath(path)
         
         # Dibujar texto
-        painter.setPen(QColor(255, 255, 255, 230) if self.isChecked() else QColor(255, 255, 255, 180))
-        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))  # Fuente más pequeña
+        painter.setPen(text_color)
+        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
 
 class ModernCard(QFrame):
-    """Tarjeta moderna con efectos de glassmorphism"""
-    def __init__(self, parent=None):
+    """Tarjeta moderna que se adapta al tema actual"""
+    def __init__(self, theme_manager, parent=None):
         super().__init__(parent)
+        self.theme_manager = theme_manager
         self.setFrameStyle(QFrame.Shape.NoFrame)
         
         # Aplicar sombra
@@ -91,15 +113,23 @@ class ModernCard(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Crear gradiente de fondo glassmorphism
+        theme = self.theme_manager.get_current_theme()
+        
+        # Crear gradiente de fondo adaptativo
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(255, 255, 255, 30))  # ← Más opaco
-        gradient.setColorAt(1, QColor(255, 255, 255, 20))  # ← Más visible
-        painter.setPen(QColor(255, 255, 255, 60))          # ← Borde más visible
+        
+        if self.theme_manager.is_dark_theme():
+            gradient.setColorAt(0, QColor(255, 255, 255, 30))
+            gradient.setColorAt(1, QColor(255, 255, 255, 20))
+            border_color = QColor(255, 255, 255, 60)
+        else:
+            gradient.setColorAt(0, QColor(255, 255, 255, 200))
+            gradient.setColorAt(1, QColor(248, 249, 250, 180))
+            border_color = QColor(0, 0, 0, 30)
         
         # Dibujar fondo con bordes redondeados
         painter.setBrush(gradient)
-        painter.setPen(QColor(255, 255, 255, 30))  # ← CAMBIAR este valor también
+        painter.setPen(border_color)
         path = QPainterPath()
         path.addRoundedRect(0, 0, self.width(), self.height(), 16, 16)
         painter.drawPath(path)
@@ -108,6 +138,11 @@ class CobranzaApp(QWidget):
     def __init__(self):
         super().__init__()
         
+        # INICIALIZAR THEME MANAGER
+        self.theme_manager = ThemeManager()
+        
+        self.logo_label = None
+                
         # ESTABLECER ÍCONO ESPECÍFICAMENTE PARA ESTA VENTANA
         try:
             icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
@@ -123,18 +158,6 @@ class CobranzaApp(QWidget):
                 
         except Exception as e:
             logging.error(f"Error al establecer ícono de ventana: {e}")
-        
-        # Paleta de colores moderna
-        self.DARK_BG = "#0a0a0a"          # Fondo principal oscuro
-        self.CARD_BG = "#16213e"          # Fondo de tarjetas
-        self.ACCENT_BLUE = "#0f3460"      # Azul oscuro para acentos
-        self.BRIGHT_CYAN = "#00b4d8"      # Cian brillante
-        self.TEXT_PRIMARY = "#ffffff"      # Texto principal
-        self.TEXT_SECONDARY = "#a0a0a0"   # Texto secundario
-        self.SUCCESS_GREEN = "#4ade80"    # Verde éxito
-        self.WARNING_ORANGE = "#fb923c"   # Naranja advertencia
-        self.DANGER_RED = "#ef4444"       # Rojo peligro
-        self.PROMISE_PURPLE = "#a855f7"   # Morado para promesas
         
         # Variable para controlar vista actual
         self.current_view = "clientes"
@@ -152,71 +175,29 @@ class CobranzaApp(QWidget):
         self.load_data()
         self.setup_auto_update()
 
+    def get_current_colors(self):
+        """Obtiene los colores del tema actual"""
+        theme = self.theme_manager.get_current_theme()
+        return {
+            'DARK_BG': theme['DARK_BG'],
+            'CARD_BG': theme['CARD_BG'],
+            'ACCENT_BLUE': theme['ACCENT_BLUE'],
+            'BRIGHT_CYAN': theme['BRIGHT_CYAN'],
+            'TEXT_PRIMARY': theme['TEXT_PRIMARY'],
+            'TEXT_SECONDARY': theme['TEXT_SECONDARY'],
+            'TITLE_TEXT': theme['TITLE_TEXT'],
+            'LOGO_FILE': theme['LOGO_FILE'],  # ← AGREGAR ESTA LÍNEA
+            'SUCCESS_GREEN': theme['SUCCESS_GREEN'],
+            'WARNING_ORANGE': theme['WARNING_ORANGE'],
+            'DANGER_RED': theme['DANGER_RED'],
+            'PROMISE_PURPLE': theme['PROMISE_PURPLE']
+        }
     def initUI(self):
         self.setWindowTitle(f"Sistema de Cobranza {version}")
         self.setGeometry(100, 100, 1600, 1000)
         
-        # Estilo CSS moderno con glassmorphism - tamaños ajustados
-        self.setStyleSheet(f"""
-
-            
-            QTableWidget {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                selection-background-color: {self.BRIGHT_CYAN};
-                color: {self.TEXT_PRIMARY};
-                gridline-color: rgba(255, 255, 255, 0.1);
-                font-size: 14px;
-                font-weight: 500;
-                backdrop-filter: blur(10px);
-            }}
-            
-            QTableWidget::item {{
-                padding: 8px 6px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                background: transparent;
-            }}
-            
-            QTableWidget::item:selected {{
-                background: rgba(0, 180, 216, 0.3);
-                color: white;
-            }}
-            
-            QTableWidget::item:hover {{
-                background: rgba(255, 255, 255, 0.05);
-            }}
-            
-            QTableWidget QHeaderView::section {{
-                background: rgba(255, 255, 255, 0.1);
-                color: {self.TEXT_PRIMARY};
-                padding: 8px 6px;
-                border: none;
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
-                border-bottom: 2px solid {self.BRIGHT_CYAN};
-                font-weight: 600;
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-            
-            QScrollBar:vertical {{
-                background: rgba(255, 255, 255, 0.05);
-                width: 8px;
-                border-radius: 4px;
-                margin: 0;
-            }}
-            
-            QScrollBar::handle:vertical {{
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                min-height: 20px;
-            }}
-            
-            QScrollBar::handle:vertical:hover {{
-                background: rgba(255, 255, 255, 0.3);
-            }}
-        """)
+        # Aplicar tema
+        self.apply_theme()
         
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -233,9 +214,89 @@ class CobranzaApp(QWidget):
         
         self.setLayout(main_layout)
 
+    def apply_theme(self):
+        """Aplica el tema actual a la aplicación"""
+        theme = self.theme_manager.get_current_theme()
+        colors = self.get_current_colors()
+        
+        # Estilo CSS adaptativo
+        self.setStyleSheet(f"""
+            QWidget {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {colors['TEXT_PRIMARY']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            
+            QTableWidget {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 12px;
+                selection-background-color: {colors['BRIGHT_CYAN']};
+                color: {colors['TEXT_PRIMARY']};
+                gridline-color: {theme['border_alpha']};
+                font-size: 14px;
+                font-weight: 500;
+                backdrop-filter: blur(10px);
+            }}
+            
+            QTableWidget::item {{
+                padding: 8px 6px;
+                border-bottom: 1px solid {theme['border_alpha']};
+                background: transparent;
+            }}
+            
+            QTableWidget::item:selected {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+                color: white;
+            }}
+            
+            QTableWidget::item:hover {{
+                background: {theme['hover_alpha']};
+            }}
+            
+            QTableWidget QHeaderView::section {{
+                background: {theme['card_bg_alpha']};
+                color: {colors['TEXT_PRIMARY']};
+                padding: 8px 6px;
+                border: none;
+                border-right: 1px solid {theme['border_alpha']};
+                border-bottom: 2px solid {colors['BRIGHT_CYAN']};
+                font-weight: 600;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            
+            QScrollBar:vertical {{
+                background: {theme['card_bg_alpha']};
+                width: 8px;
+                border-radius: 4px;
+                margin: 0;
+            }}
+            
+            QScrollBar::handle:vertical {{
+                background: {theme['border_alpha']};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            
+            QScrollBar::handle:vertical:hover {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.5);
+            }}
+        """)
+
+    def hex_to_rgb(self, hex_color):
+        """Convertir color hex a RGB"""
+        hex_color = hex_color.lstrip('#')
+        return ', '.join(str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4))
+
     def create_modern_header(self, layout):
         """Crear header moderno con glassmorphism - tamaños optimizados"""
-        header_frame = ModernCard()
+        colors = self.get_current_colors()
+        
+        header_frame = ModernCard(self.theme_manager)
         header_frame.setFixedHeight(120)
         header_frame.setContentsMargins(20, 15, 20, 15)
         
@@ -243,30 +304,17 @@ class CobranzaApp(QWidget):
         header_layout.setSpacing(20)
         
         # Logo y título - EN FILA (horizontal)
-        logo_section = QHBoxLayout()  # ← CAMBIO: QVBoxLayout() por QHBoxLayout()
-        logo_section.setSpacing(20)  # ← CAMBIO: spacing de 15 a 20 para separar logo del texto
+        logo_section = QHBoxLayout()
+        logo_section.setSpacing(20)
         
-        # Intentar cargar logo
-        try:
-            logo_label = QLabel()
-            pixmap = QPixmap("Logo-Blanco.png")
-            if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,  # ← CAMBIO: tamaño más grande
-                                            Qt.TransformationMode.SmoothTransformation)
-                logo_label.setPixmap(scaled_pixmap)
-            else:
-                raise FileNotFoundError
-        except:
-            # Fallback si no hay logo
-            logo_label = QLabel("GARCIA")
-            logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-            logo_label.setStyleSheet(f"color: {self.BRIGHT_CYAN}; background: transparent;")
+        # Crear logo dinámico
+        self.logo_label = self.create_dynamic_logo()
         
         title_label = QLabel("SISTEMA DE COBRANZA")
         title_label.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        title_label.setStyleSheet(f"color: {self.TEXT_PRIMARY}; background: transparent;")  # sistema de cobranza
+        title_label.setStyleSheet(f"color: {colors['TITLE_TEXT']}; background: transparent;")
         
-        logo_section.addWidget(logo_label)
+        logo_section.addWidget(self.logo_label)
         logo_section.addWidget(title_label)
         
         header_layout.addLayout(logo_section)
@@ -275,11 +323,129 @@ class CobranzaApp(QWidget):
         # Panel de estadísticas más compacto
         self.create_compact_stats_panel(header_layout)
         
+        # BOTONES DE CONFIGURACIÓN Y RECARGA
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setSpacing(8)
+        
+        # Botón configuración más pequeño
+        config_button = QPushButton("⚙️")
+        config_button.setFont(QFont("Segoe UI", 12))
+        config_button.setFixedSize(30, 30)
+        config_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        config_button.setToolTip("Configuración")
+        config_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.2);
+                color: {colors['BRIGHT_CYAN']};
+                border: 1px solid rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+                border-radius: 15px;
+            }}
+            QPushButton:hover {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+            }}
+        """)
+        config_button.clicked.connect(self.show_settings)
+        
+        # Botón recargar más pequeño
+        reload_button = QPushButton("🔄")
+        reload_button.setFont(QFont("Segoe UI", 12))
+        reload_button.setFixedSize(30, 30)
+        reload_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        reload_button.setToolTip("Actualizar Datos")
+        reload_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.2);
+                color: {colors['BRIGHT_CYAN']};
+                border: 1px solid rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+                border-radius: 15px;
+            }}
+            QPushButton:hover {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+            }}
+        """)
+        reload_button.clicked.connect(self.reload_data)
+        
+        buttons_layout.addWidget(config_button)
+        buttons_layout.addWidget(reload_button)
+        header_layout.addLayout(buttons_layout)
+        
         header_frame.setLayout(header_layout)
         layout.addWidget(header_frame)
 
+
+    def create_dynamic_logo(self):
+        """Crear logo que se adapta al tema actual"""
+        logo_label = QLabel()
+        logo_label.setFixedSize(200, 60)  # Tamaño fijo para el contenedor
+        
+        # Obtener archivo de logo según el tema
+        logo_file = self.theme_manager.get_current_theme()['LOGO_FILE']
+        
+        try:
+            # Intentar cargar el logo del tema actual
+            if os.path.exists(logo_file):
+                pixmap = QPixmap(logo_file)
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.SmoothTransformation)
+                    logo_label.setPixmap(scaled_pixmap)
+                    logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    logging.info(f"Logo cargado: {logo_file}")
+                    return logo_label
+                else:
+                    logging.warning(f"El archivo de logo está corrupto: {logo_file}")
+            else:
+                logging.warning(f"Archivo de logo no encontrado: {logo_file}")
+        except Exception as e:
+            logging.error(f"Error al cargar logo {logo_file}: {e}")
+        
+        # Fallback: texto si no hay logo
+        colors = self.get_current_colors()
+        logo_label.setText("GARCIA")
+        logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        logo_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        return logo_label
+
+    def update_logo(self):
+        """Actualizar el logo según el tema actual"""
+        if self.logo_label is None:
+            return
+        
+        # Obtener archivo de logo según el tema actual
+        logo_file = self.theme_manager.get_current_theme()['LOGO_FILE']
+        colors = self.get_current_colors()
+        
+        try:
+            # Intentar cargar el nuevo logo
+            if os.path.exists(logo_file):
+                pixmap = QPixmap(logo_file)
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.SmoothTransformation)
+                    self.logo_label.setPixmap(scaled_pixmap)
+                    self.logo_label.setText("")  # Limpiar texto si había
+                    logging.info(f"Logo actualizado a: {logo_file}")
+                    return
+                else:
+                    logging.warning(f"El archivo de logo está corrupto: {logo_file}")
+            else:
+                logging.warning(f"Archivo de logo no encontrado: {logo_file}")
+        except Exception as e:
+            logging.error(f"Error al actualizar logo {logo_file}: {e}")
+        
+        # Fallback: mostrar texto si no se puede cargar el logo
+        self.logo_label.clear()  # Limpiar pixmap si había
+        self.logo_label.setText("GARCIA")
+        self.logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        self.logo_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
+    
+    
     def create_compact_stats_panel(self, layout):
         """Crear panel de estadísticas compacto"""
+        colors = self.get_current_colors()
+        
         stats_container = QWidget()
         stats_container.setFixedWidth(600)
         stats_layout = QHBoxLayout()
@@ -291,11 +457,11 @@ class CobranzaApp(QWidget):
         
         total_label = QLabel("💰 Deuda Total")
         total_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
-        total_label.setStyleSheet(f"color: {self.TEXT_SECONDARY};")
+        total_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
         
         self.amount_label = QLabel("Cargando...")
         self.amount_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        self.amount_label.setStyleSheet(f"color: {self.BRIGHT_CYAN};")
+        self.amount_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']};")
         
         total_section.addWidget(total_label)
         total_section.addWidget(self.amount_label)
@@ -305,7 +471,7 @@ class CobranzaApp(QWidget):
         # Separador vertical
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
-        separator.setStyleSheet("background: rgba(255, 255, 255, 0.1); width: 1px;")
+        separator.setStyleSheet(f"background: {colors['TEXT_SECONDARY']}; width: 1px;")
         stats_layout.addWidget(separator)
         
         # Desglose horizontal compacto
@@ -313,9 +479,9 @@ class CobranzaApp(QWidget):
         breakdown_layout.setSpacing(20)
         
         # Crear tarjetas compactas
-        self.clientes_compact = self.create_compact_stat("👤", "Clientes", "--", self.SUCCESS_GREEN, )
-        self.empresas_compact = self.create_compact_stat("🏢", "Empresas", "--", self.WARNING_ORANGE)
-        self.buro_compact = self.create_compact_stat("⚠️", "Buró", "--", self.DANGER_RED)
+        self.clientes_compact = self.create_compact_stat("👤", "Clientes", "--", colors['SUCCESS_GREEN'])
+        self.empresas_compact = self.create_compact_stat("🏢", "Empresas", "--", colors['WARNING_ORANGE'])
+        self.buro_compact = self.create_compact_stat("⚠️", "Buró", "--", colors['DANGER_RED'])
         
         breakdown_layout.addWidget(self.clientes_compact)
         breakdown_layout.addWidget(self.empresas_compact)
@@ -323,37 +489,20 @@ class CobranzaApp(QWidget):
         
         stats_layout.addLayout(breakdown_layout)
         
-        # Botón recargar más pequeño
-        reload_button = QPushButton("🔄")
-        reload_button.setFont(QFont("Segoe UI", 12))
-        reload_button.setFixedSize(30, 30)
-        reload_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        reload_button.setToolTip("Actualizar Datos")
-        reload_button.setStyleSheet(f"""
-            QPushButton {{
-                background: rgba(0, 180, 216, 0.2);
-                color: {self.BRIGHT_CYAN};
-                border: 1px solid rgba(0, 180, 216, 0.3);
-                border-radius: 15px;
-            }}
-            QPushButton:hover {{
-                background: rgba(0, 180, 216, 0.3);
-            }}
-        """)
-        reload_button.clicked.connect(self.reload_data)
-        stats_layout.addWidget(reload_button)
-        
         stats_container.setLayout(stats_layout)
         layout.addWidget(stats_container)
 
     def create_compact_stat(self, icon, label, value, color):
         """Crear tarjeta de estadística compacta"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
         card = QWidget()
         card.setFixedSize(80, 50)
         card.setStyleSheet(f"""
             QWidget {{
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
                 border-radius: 8px;
             }}
         """)
@@ -372,7 +521,7 @@ class CobranzaApp(QWidget):
         
         text_label = QLabel(label)
         text_label.setFont(QFont("Segoe UI", 7, QFont.Weight.Medium))
-        text_label.setStyleSheet(f"color: {self.TEXT_SECONDARY};")
+        text_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
         
         header_layout.addWidget(icon_label)
         header_layout.addWidget(text_label)
@@ -400,7 +549,7 @@ class CobranzaApp(QWidget):
 
     def create_modern_navigation(self, layout):
         """Crear navegación moderna con glassmorphism - más compacta"""
-        nav_frame = ModernCard()
+        nav_frame = ModernCard(self.theme_manager)
         nav_frame.setFixedHeight(55)
         nav_frame.setContentsMargins(20, 8, 20, 8)
         
@@ -408,20 +557,20 @@ class CobranzaApp(QWidget):
         nav_layout.setSpacing(12)
         
         # Botones de navegación más pequeños
-        self.clientes_btn = ModernButton("CRÉDITOS PERSONALES")
+        self.clientes_btn = ModernButton("CRÉDITOS PERSONALES", self.theme_manager)
         self.clientes_btn.setCheckable(True)
         self.clientes_btn.setChecked(True)
         self.clientes_btn.setFixedHeight(35)
         self.clientes_btn.setFixedWidth(200)
         self.clientes_btn.clicked.connect(lambda: self.switch_view("clientes"))
         
-        self.empresas_btn = ModernButton("CRÉDITOS EMPRESARIALES")
+        self.empresas_btn = ModernButton("CRÉDITOS EMPRESARIALES", self.theme_manager)
         self.empresas_btn.setCheckable(True)
         self.empresas_btn.setFixedHeight(35)
         self.empresas_btn.setFixedWidth(220)
         self.empresas_btn.clicked.connect(lambda: self.switch_view("empresas"))
         
-        self.buro_btn = ModernButton("BURÓ DE CRÉDITO")
+        self.buro_btn = ModernButton("BURÓ DE CRÉDITO", self.theme_manager)
         self.buro_btn.setCheckable(True)
         self.buro_btn.setFixedHeight(35)
         self.buro_btn.setFixedWidth(150)
@@ -449,13 +598,45 @@ class CobranzaApp(QWidget):
         self.main_frame.setLayout(self.main_layout)
         layout.addWidget(self.main_frame)
 
+    def show_settings(self):
+        """Muestra el diálogo de configuración"""
+        try:
+            settings_dialog = SettingsDialog(self.theme_manager, self)
+            settings_dialog.theme_changed.connect(self.on_theme_changed)
+            settings_dialog.exec()
+        except Exception as e:
+            logging.error(f"Error mostrando configuración: {e}")
+            QMessageBox.critical(self, "❌ Error", f"Error al abrir configuración: {str(e)}")
+
+    def on_theme_changed(self, theme_name):
+        """Maneja el cambio de tema"""
+        try:
+            logging.info(f"Cambiando tema a: {theme_name}")
+            
+            # Aplicar nuevo tema
+            self.apply_theme()
+            
+            # Actualizar el logo según el nuevo tema
+            self.update_logo()
+            
+            # Refrescar la vista actual
+            self.refresh_current_view()
+            
+            logging.info("Tema cambiado exitosamente")
+            
+        except Exception as e:
+            logging.error(f"Error cambiando tema: {e}")
+            QMessageBox.critical(self, "❌ Error", f"Error al cambiar tema: {str(e)}")
+
+    
     def create_clientes_view(self):
         """Crear vista de clientes modernizada"""
         self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
         
         # Verificar si los datos están cargados
         if not self.data_loaded or not self.clientes_data:
-            loading_container = ModernCard()
+            loading_container = ModernCard(self.theme_manager)
             loading_container.setFixedHeight(200)
             loading_layout = QVBoxLayout()
             loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -463,7 +644,7 @@ class CobranzaApp(QWidget):
             loading_label = QLabel("⏳ Cargando datos de clientes...")
             loading_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Medium))
             loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            loading_label.setStyleSheet(f"color: {self.TEXT_SECONDARY}; margin: 30px;")
+            loading_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']}; margin: 30px;")
             
             loading_layout.addWidget(loading_label)
             loading_container.setLayout(loading_layout)
@@ -476,17 +657,20 @@ class CobranzaApp(QWidget):
         categories_layout.setSpacing(15)
         
         # Crear las 4 categorías con colores modernos
-        self.create_modern_category_table(categories_layout, "PROMESA DE PAGO", self.PROMISE_PURPLE, 0, 0, "🤝")
-        self.create_modern_category_table(categories_layout, "MENOS DE 30 DÍAS", self.SUCCESS_GREEN, 0, 1, "✅")
-        self.create_modern_category_table(categories_layout, "30 A 60 DÍAS", self.WARNING_ORANGE, 1, 0, "⚠️")
-        self.create_modern_category_table(categories_layout, "MÁS DE 60 DÍAS", self.DANGER_RED, 1, 1, "🚨")
+        self.create_modern_category_table(categories_layout, "PROMESA DE PAGO", colors['PROMISE_PURPLE'], 0, 0, "🤝")
+        self.create_modern_category_table(categories_layout, "MENOS DE 30 DÍAS", colors['SUCCESS_GREEN'], 0, 1, "✅")
+        self.create_modern_category_table(categories_layout, "30 A 60 DÍAS", colors['WARNING_ORANGE'], 1, 0, "⚠️")
+        self.create_modern_category_table(categories_layout, "MÁS DE 60 DÍAS", colors['DANGER_RED'], 1, 1, "🚨")
         
         categories_widget.setLayout(categories_layout)
         self.main_layout.addWidget(categories_widget)
 
     def create_modern_category_table(self, layout, title, color, row, col, icon):
         """Crear tabla de categoría moderna - tamaños optimizados"""
-        category_card = ModernCard()
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        category_card = ModernCard(self.theme_manager)
         category_card.setMinimumHeight(320)
         category_card.setMaximumHeight(400)
         
@@ -536,9 +720,9 @@ class CobranzaApp(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         
-        table.setColumnWidth(1, 100)  # Monto más estrecho
-        table.setColumnWidth(2, 85)   # Fecha más estrecha
-        table.setColumnWidth(3, 60)   # Días más estrecho
+        table.setColumnWidth(1, 100)
+        table.setColumnWidth(2, 85)
+        table.setColumnWidth(3, 60)
         
         table.setMaximumHeight(250)
         table.setMinimumHeight(180)
@@ -546,7 +730,7 @@ class CobranzaApp(QWidget):
         # Estilo específico para esta tabla
         table.setStyleSheet(f"""
             QTableWidget {{
-                background: rgba(255, 255, 255, 0.03);
+                background: {theme['card_bg_alpha']};
                 border: 1px solid rgba({self.hex_to_rgb(color)}, 0.2);
                 font-size: 9px;
             }}
@@ -571,14 +755,11 @@ class CobranzaApp(QWidget):
         
         layout.addWidget(category_card, row, col)
 
-    def hex_to_rgb(self, hex_color):
-        """Convertir color hex a RGB"""
-        hex_color = hex_color.lstrip('#')
-        return ', '.join(str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4))
-
     def create_buro_view(self):
         """Crear vista de buró moderna - optimizada"""
         self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
         
         # Sincronizar clientes con buró
         try:
@@ -588,7 +769,7 @@ class CobranzaApp(QWidget):
             logging.error(f"Error al sincronizar buró: {e}")
         
         # Contenedor principal más compacto
-        buro_card = ModernCard()
+        buro_card = ModernCard(self.theme_manager)
         buro_layout = QVBoxLayout()
         buro_layout.setContentsMargins(20, 20, 20, 20)
         buro_layout.setSpacing(15)
@@ -605,7 +786,7 @@ class CobranzaApp(QWidget):
         
         title_label = QLabel("CLIENTES EN BURÓ DE CRÉDITO")
         title_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        title_label.setStyleSheet(f"color: {self.DANGER_RED};")
+        title_label.setStyleSheet(f"color: {colors['DANGER_RED']};")
         
         title_section.addWidget(icon_label)
         title_section.addWidget(title_label)
@@ -623,12 +804,12 @@ class CobranzaApp(QWidget):
         
         count_label = QLabel(f"{count_buro} Clientes")
         count_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
-        count_label.setStyleSheet(f"color: {self.TEXT_SECONDARY};")
+        count_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
         count_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         
         total_label = QLabel(f"${total_buro:,.2f}")
         total_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-        total_label.setStyleSheet(f"color: {self.DANGER_RED};")
+        total_label.setStyleSheet(f"color: {colors['DANGER_RED']};")
         total_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         
         stats_section.addWidget(count_label)
@@ -653,26 +834,26 @@ class CobranzaApp(QWidget):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         
-        table.setColumnWidth(0, 60)   # ID más estrecho
-        table.setColumnWidth(2, 110)  # Saldo más estrecho
-        table.setColumnWidth(3, 100)  # Fecha más estrecha
-        table.setColumnWidth(4, 100)  # Días más estrecho
+        table.setColumnWidth(0, 60)
+        table.setColumnWidth(2, 110)
+        table.setColumnWidth(3, 100)
+        table.setColumnWidth(4, 100)
         
         # Estilo específico para tabla de buró
         table.setStyleSheet(f"""
             QTableWidget {{
-                background: rgba(239, 68, 68, 0.05);
-                border: 1px solid rgba(239, 68, 68, 0.2);
+                background: rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.05);
+                border: 1px solid rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.2);
                 font-size: 9px;
             }}
             QTableWidget::item {{
                 padding: 6px 4px;
             }}
             QTableWidget::item:selected {{
-                background: rgba(239, 68, 68, 0.3);
+                background: rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.3);
             }}
             QTableWidget QHeaderView::section {{
-                border-bottom: 2px solid {self.DANGER_RED};
+                border-bottom: 2px solid {colors['DANGER_RED']};
                 padding: 6px 4px;
                 font-size: 8px;
             }}
@@ -722,6 +903,7 @@ class CobranzaApp(QWidget):
         buro_card.setLayout(buro_layout)
         self.main_layout.addWidget(buro_card)
 
+    # Resto de métodos existentes (sin cambios significativos, solo ajustando referencias de colores)
     def populate_category_table(self, table, category_title, color):
         """Poblar tabla con datos según la categoría - optimizado"""
         category_type = self.get_category_from_title(category_title)
@@ -740,7 +922,7 @@ class CobranzaApp(QWidget):
                 
                 if oldest_date:
                     days_diff = (datetime.now().date() - oldest_date).days
-                    fecha_str = oldest_date.strftime("%d/%m")  # Formato más corto
+                    fecha_str = oldest_date.strftime("%d/%m")
                 else:
                     days_diff = "N/A"
                     fecha_str = "N/A"
@@ -769,7 +951,7 @@ class CobranzaApp(QWidget):
             name_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             name_item.setData(Qt.ItemDataRole.UserRole, client['id'])
             name_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Medium))
-            name_item.setToolTip(client['nombre'])  # Tooltip con nombre completo
+            name_item.setToolTip(client['nombre'])
             table.setItem(row, 0, name_item)
             
             # Monto - formato más compacto
@@ -807,14 +989,15 @@ class CobranzaApp(QWidget):
 
     def get_category_background_color(self, color):
         """Obtener color de fondo para las celdas"""
-        if color == self.PROMISE_PURPLE:
-            return "#a855f7"  # Morado transparente
-        elif color == self.SUCCESS_GREEN:
-            return "#4ade80"  # Verde transparente
-        elif color == self.WARNING_ORANGE:
-            return "#fb923c"  # Naranja transparente
-        elif color == self.DANGER_RED:
-            return "#ef4444"  # Rojo transparente
+        colors = self.get_current_colors()
+        if color == colors['PROMISE_PURPLE']:
+            return "#a855f7"
+        elif color == colors['SUCCESS_GREEN']:
+            return "#4ade80"
+        elif color == colors['WARNING_ORANGE']:
+            return "#fb923c"
+        elif color == colors['DANGER_RED']:
+            return "#ef4444"
         return "#ffffff"
 
     def switch_view(self, view):
@@ -979,6 +1162,7 @@ class CobranzaApp(QWidget):
         """Cargar datos desde la base de datos"""
         try:
             logging.info("Cargando datos desde la base de datos...")
+            colors = self.get_current_colors()
             
             # Mostrar estado de carga
             self.amount_label.setText("⏳ Cargando...")
@@ -1034,9 +1218,14 @@ class CobranzaApp(QWidget):
 
     def refresh_current_view(self):
         """Actualizar la vista actual después de cargar datos"""
-        if self.current_view == "buro":
-            self.create_buro_view()
+        if hasattr(self, 'current_view'):
+            if self.current_view == "buro":
+                self.create_buro_view()
+            else:
+                self.create_clientes_view()
         else:
+            # Si no existe current_view, crear vista por defecto
+            self.current_view = "clientes"
             self.create_clientes_view()
 
     def update_debt_info(self):
@@ -1182,7 +1371,7 @@ def main():
                             
                             app.setApplicationDisplayName("Sistema de Cobranza")
                             app.setApplicationName("Cobranza")
-                            app.setApplicationVersion("v2.3")
+                            app.setApplicationVersion("v2.4")
                             app.setOrganizationName("Garcia")
                             app.setOrganizationDomain("garcia.com")
                             

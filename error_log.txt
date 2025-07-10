@@ -1,2 +1,2 @@
 Error al iniciar la aplicación:
-unsupported operand type(s) for +=: 'float' and 'decimal.Decimal'
+'TITLE_TEXT'
