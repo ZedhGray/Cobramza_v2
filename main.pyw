@@ -141,8 +141,6 @@ class CobranzaApp(QWidget):
         # INICIALIZAR THEME MANAGER
         self.theme_manager = ThemeManager()
         
-        self.logo_label = None
-                
         # ESTABLECER ÍCONO ESPECÍFICAMENTE PARA ESTA VENTANA
         try:
             icon_files = ['lga2.ico', 'lga.ico', 'logo.ico', 'icon.ico']
@@ -307,14 +305,28 @@ class CobranzaApp(QWidget):
         logo_section = QHBoxLayout()
         logo_section.setSpacing(20)
         
-        # Crear logo dinámico
-        self.logo_label = self.create_dynamic_logo()
+        # Intentar cargar logo
+        try:
+            logo_label = QLabel()
+            logo_file = self.theme_manager.get_current_theme()['LOGO_FILE']
+            pixmap = QPixmap(logo_file)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
+                                            Qt.TransformationMode.SmoothTransformation)
+                logo_label.setPixmap(scaled_pixmap)
+            else:
+                raise FileNotFoundError
+        except:
+            # Fallback si no hay logo
+            logo_label = QLabel("GARCIA")
+            logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+            logo_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
         
         title_label = QLabel("SISTEMA DE COBRANZA")
         title_label.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {colors['TITLE_TEXT']}; background: transparent;")
         
-        logo_section.addWidget(self.logo_label)
+        logo_section.addWidget(logo_label)
         logo_section.addWidget(title_label)
         
         header_layout.addLayout(logo_section)
@@ -372,76 +384,6 @@ class CobranzaApp(QWidget):
         header_frame.setLayout(header_layout)
         layout.addWidget(header_frame)
 
-
-    def create_dynamic_logo(self):
-        """Crear logo que se adapta al tema actual"""
-        logo_label = QLabel()
-        logo_label.setFixedSize(200, 60)  # Tamaño fijo para el contenedor
-        
-        # Obtener archivo de logo según el tema
-        logo_file = self.theme_manager.get_current_theme()['LOGO_FILE']
-        
-        try:
-            # Intentar cargar el logo del tema actual
-            if os.path.exists(logo_file):
-                pixmap = QPixmap(logo_file)
-                if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
-                                                Qt.TransformationMode.SmoothTransformation)
-                    logo_label.setPixmap(scaled_pixmap)
-                    logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    logging.info(f"Logo cargado: {logo_file}")
-                    return logo_label
-                else:
-                    logging.warning(f"El archivo de logo está corrupto: {logo_file}")
-            else:
-                logging.warning(f"Archivo de logo no encontrado: {logo_file}")
-        except Exception as e:
-            logging.error(f"Error al cargar logo {logo_file}: {e}")
-        
-        # Fallback: texto si no hay logo
-        colors = self.get_current_colors()
-        logo_label.setText("GARCIA")
-        logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        logo_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        return logo_label
-
-    def update_logo(self):
-        """Actualizar el logo según el tema actual"""
-        if self.logo_label is None:
-            return
-        
-        # Obtener archivo de logo según el tema actual
-        logo_file = self.theme_manager.get_current_theme()['LOGO_FILE']
-        colors = self.get_current_colors()
-        
-        try:
-            # Intentar cargar el nuevo logo
-            if os.path.exists(logo_file):
-                pixmap = QPixmap(logo_file)
-                if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
-                                                Qt.TransformationMode.SmoothTransformation)
-                    self.logo_label.setPixmap(scaled_pixmap)
-                    self.logo_label.setText("")  # Limpiar texto si había
-                    logging.info(f"Logo actualizado a: {logo_file}")
-                    return
-                else:
-                    logging.warning(f"El archivo de logo está corrupto: {logo_file}")
-            else:
-                logging.warning(f"Archivo de logo no encontrado: {logo_file}")
-        except Exception as e:
-            logging.error(f"Error al actualizar logo {logo_file}: {e}")
-        
-        # Fallback: mostrar texto si no se puede cargar el logo
-        self.logo_label.clear()  # Limpiar pixmap si había
-        self.logo_label.setText("GARCIA")
-        self.logo_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        self.logo_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
-    
-    
     def create_compact_stats_panel(self, layout):
         """Crear panel de estadísticas compacto"""
         colors = self.get_current_colors()
@@ -607,28 +549,45 @@ class CobranzaApp(QWidget):
         except Exception as e:
             logging.error(f"Error mostrando configuración: {e}")
             QMessageBox.critical(self, "❌ Error", f"Error al abrir configuración: {str(e)}")
-
     def on_theme_changed(self, theme_name):
         """Maneja el cambio de tema"""
         try:
             logging.info(f"Cambiando tema a: {theme_name}")
-            
-            # Aplicar nuevo tema
             self.apply_theme()
             
-            # Actualizar el logo según el nuevo tema
-            self.update_logo()
+            # ACTUALIZAR EL TÍTULO MANUALMENTE
+            colors = self.get_current_colors()
+            header_widgets = self.findChildren(QLabel)
+            for widget in header_widgets:
+                if widget.text() == "SISTEMA DE COBRANZA":
+                    widget.setStyleSheet(f"color: {colors['TITLE_TEXT']}; background: transparent;")
+                    break
             
-            # Refrescar la vista actual
+            # ACTUALIZAR EL LOGO MANUALMENTE
+            logo_file = colors['LOGO_FILE']
+            for widget in header_widgets:
+                if widget.pixmap() is not None:  # Es el logo
+                    try:
+                        pixmap = QPixmap(logo_file)
+                        if not pixmap.isNull():
+                            scaled_pixmap = pixmap.scaled(200, 60, Qt.AspectRatioMode.KeepAspectRatio,
+                                                        Qt.TransformationMode.SmoothTransformation)
+                            widget.setPixmap(scaled_pixmap)
+                        else:
+                            widget.setText("GARCIA")
+                            widget.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
+                    except:
+                        widget.setText("GARCIA")
+                        widget.setStyleSheet(f"color: {colors['BRIGHT_CYAN']}; background: transparent;")
+                    break
+            
             self.refresh_current_view()
-            
             logging.info("Tema cambiado exitosamente")
             
         except Exception as e:
             logging.error(f"Error cambiando tema: {e}")
             QMessageBox.critical(self, "❌ Error", f"Error al cambiar tema: {str(e)}")
 
-    
     def create_clientes_view(self):
         """Crear vista de clientes modernizada"""
         self.clear_layout(self.main_layout)
@@ -1218,14 +1177,9 @@ class CobranzaApp(QWidget):
 
     def refresh_current_view(self):
         """Actualizar la vista actual después de cargar datos"""
-        if hasattr(self, 'current_view'):
-            if self.current_view == "buro":
-                self.create_buro_view()
-            else:
-                self.create_clientes_view()
+        if self.current_view == "buro":
+            self.create_buro_view()
         else:
-            # Si no existe current_view, crear vista por defecto
-            self.current_view = "clientes"
             self.create_clientes_view()
 
     def update_debt_info(self):
