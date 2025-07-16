@@ -173,7 +173,7 @@ class ClienteDetalleWindow(QWidget):
         
         # Centrar la ventana correctamente
         window_width = 1600
-        window_height = 1000
+        window_height = 950
         screen = self.screen()
         screen_width = screen.availableGeometry().width()
         screen_height = screen.availableGeometry().height()
@@ -1490,6 +1490,33 @@ class CalendarDialog(QDialog):
     def apply_theme_styles(self):
         """Aplica estilos según el tema actual"""
         theme = self.theme_manager.get_current_theme()
+        is_dark = self.theme_manager.is_dark_theme()
+        
+        # Colores específicos para cada tema
+        if is_dark:
+            # Modo oscuro
+            calendar_bg = theme['card_bg_alpha']
+            calendar_border = theme['border_alpha']
+            table_bg = "transparent"
+            table_alternate_bg = "rgba(255, 255, 255, 0.02)"
+            header_bg = theme['card_bg_alpha']
+            header_text = theme['TEXT_PRIMARY']
+            nav_button_bg = theme['card_bg_alpha']
+            nav_button_hover = theme['hover_alpha']
+            today_bg = "rgba(0, 180, 216, 0.3)"
+            weekend_color = "#ff6b6b"
+        else:
+            # Modo claro
+            calendar_bg = "rgba(255, 255, 255, 0.95)"
+            calendar_border = "rgba(0, 0, 0, 0.1)"
+            table_bg = "rgba(255, 255, 255, 0.9)"
+            table_alternate_bg = "rgba(248, 249, 250, 0.8)"
+            header_bg = "rgba(248, 249, 250, 0.9)"
+            header_text = "#333333"
+            nav_button_bg = "rgba(255, 255, 255, 0.8)"
+            nav_button_hover = "rgba(25, 118, 210, 0.1)"
+            today_bg = "rgba(25, 118, 210, 0.2)"
+            weekend_color = "#d32f2f"
         
         self.setStyleSheet(f"""
             QDialog {{
@@ -1512,11 +1539,25 @@ class CalendarDialog(QDialog):
                 padding: 8px;
                 border-radius: 8px;
                 font-size: 11px;
+                min-width: 120px;
             }}
             
             QComboBox:hover {{
                 border-color: {theme['BRIGHT_CYAN']};
                 background: {theme['hover_alpha']};
+            }}
+            
+            QComboBox::drop-down {{
+                border: none;
+                background: transparent;
+                width: 20px;
+            }}
+            
+            QComboBox::down-arrow {{
+                image: none;
+                border: none;
+                width: 0px;
+                height: 0px;
             }}
             
             QComboBox QAbstractItemView {{
@@ -1526,39 +1567,167 @@ class CalendarDialog(QDialog):
                 border-radius: 8px;
                 selection-background-color: {theme['BRIGHT_CYAN']};
                 selection-color: white;
+                outline: none;
             }}
             
+            /* Estilos principales del calendario */
             QCalendarWidget {{
-                background: {theme['card_bg_alpha']};
+                background: {calendar_bg};
                 color: {theme['TEXT_PRIMARY']};
-                border: 1px solid {theme['border_alpha']};
+                border: 1px solid {calendar_border};
                 border-radius: 12px;
-                selection-background-color: {theme['BRIGHT_CYAN']};
+                font-size: 11px;
+                padding: 5px;
             }}
             
+            /* Tabla principal del calendario */
             QCalendarWidget QTableView {{
-                background: transparent;
+                background: {table_bg};
                 color: {theme['TEXT_PRIMARY']};
-                gridline-color: {theme['border_alpha']};
+                gridline-color: {calendar_border};
                 selection-background-color: {theme['BRIGHT_CYAN']};
                 selection-color: white;
+                border: none;
+                outline: none;
             }}
             
-            QCalendarWidget QHeaderView::section {{
-                background: {theme['card_bg_alpha']};
+            /* Alternancia de filas */
+            QCalendarWidget QTableView::item {{
+                background: {table_bg};
                 color: {theme['TEXT_PRIMARY']};
-                border: 1px solid {theme['border_alpha']};
-                padding: 8px;
+                border: 1px solid {calendar_border};
+                padding: 6px;
+            }}
+            
+            QCalendarWidget QTableView::item:alternate {{
+                background: {table_alternate_bg};
+            }}
+            
+            /* Hover en días */
+            QCalendarWidget QTableView::item:hover {{
+                background: {theme['hover_alpha']};
+                border-color: {theme['BRIGHT_CYAN']};
+            }}
+            
+            /* Día seleccionado */
+            QCalendarWidget QTableView::item:selected {{
+                background: {theme['BRIGHT_CYAN']};
+                color: white;
+                border-color: {theme['BRIGHT_CYAN']};
+                font-weight: bold;
+            }}
+            
+            /* Día actual */
+            QCalendarWidget QTableView::item:focus {{
+                background: {today_bg};
+                color: {theme['TEXT_PRIMARY']};
+                border: 2px solid {theme['BRIGHT_CYAN']};
+            }}
+            
+            /* Encabezado del calendario (días de la semana) */
+            QCalendarWidget QHeaderView {{
+                background: {header_bg};
+                color: {header_text};
+                border: none;
+                border-radius: 6px;
                 font-weight: 600;
                 font-size: 10px;
             }}
             
+            QCalendarWidget QHeaderView::section {{
+                background: {header_bg};
+                color: {header_text};
+                border: 1px solid {calendar_border};
+                padding: 8px;
+                font-weight: 600;
+                font-size: 10px;
+                text-align: center;
+            }}
+            
+            /* Botones de navegación */
+            QCalendarWidget QToolButton {{
+                background: {nav_button_bg};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {calendar_border};
+                border-radius: 6px;
+                padding: 4px;
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            
+            QCalendarWidget QToolButton:hover {{
+                background: {nav_button_hover};
+                border-color: {theme['BRIGHT_CYAN']};
+            }}
+            
+            QCalendarWidget QToolButton:pressed {{
+                background: {theme['BRIGHT_CYAN']};
+                color: white;
+            }}
+            
+            /* Menú desplegable del mes/año */
+            QCalendarWidget QMenu {{
+                background: {theme['CARD_BG']};
+                color: {theme['TEXT_PRIMARY']};
+                border: 1px solid {calendar_border};
+                border-radius: 8px;
+            }}
+            
+            QCalendarWidget QMenu::item {{
+                background: transparent;
+                color: {theme['TEXT_PRIMARY']};
+                padding: 6px 12px;
+            }}
+            
+            QCalendarWidget QMenu::item:selected {{
+                background: {theme['BRIGHT_CYAN']};
+                color: white;
+            }}
+            
+            /* Separador */
             QFrame[frameShape="4"] {{
                 background: {theme['border_alpha']};
                 max-height: 1px;
                 margin: 10px 0;
             }}
+            
+            /* Estilos específicos para días del weekend */
+            QCalendarWidget QAbstractItemView:disabled {{
+                color: {theme['TEXT_SECONDARY']};
+            }}
         """)
+        
+        # Aplicar estilos adicionales programáticamente después de mostrar el widget
+        try:
+            self.calendar.setStyleSheet(f"""
+                QCalendarWidget QWidget {{
+                    background: {calendar_bg};
+                    color: {theme['TEXT_PRIMARY']};
+                }}
+                
+                QCalendarWidget QWidget#qt_calendar_navigationbar {{
+                    background: {header_bg};
+                    border-bottom: 1px solid {calendar_border};
+                }}
+                
+                QCalendarWidget QSpinBox {{
+                    background: {nav_button_bg};
+                    color: {theme['TEXT_PRIMARY']};
+                    border: 1px solid {calendar_border};
+                    border-radius: 4px;
+                    padding: 2px;
+                    font-size: 11px;
+                }}
+                
+                QCalendarWidget QSpinBox:hover {{
+                    border-color: {theme['BRIGHT_CYAN']};
+                }}
+            """)
+        except Exception as e:
+            import logging
+            logging.error(f"Error aplicando estilos adicionales al calendario: {e}")
+            # Continuar sin fallar si no se pueden aplicar los estilos adicionales
+    
     
     def get_selection(self):
         qdate = self.calendar.selectedDate()

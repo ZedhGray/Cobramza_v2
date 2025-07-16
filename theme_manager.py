@@ -21,7 +21,7 @@ class ThemeManager:
         'LOGO_FILE': "Logo-Blanco.png",
         'TITLE_TEXT': "#ffffff",
         'TEXT_PRIMARY': "#ffffff",
-        'TEXT_SECONDARY': "#a0a0a0",
+        'TEXT_SECONDARY': "#ffffff",
         'SUCCESS_GREEN': "#4ade80",
         'WARNING_ORANGE': "#fb923c",
         'DANGER_RED': "#ef4444",
@@ -44,8 +44,8 @@ class ThemeManager:
         'ACCENT_BLUE': "#1976d2",
         'BRIGHT_CYAN': "#0288d1",
         'TITLE_TEXT': "#000000",
-        'TEXT_PRIMARY': "#212529",
-        'TEXT_SECONDARY': "#6c757d",
+        'TEXT_PRIMARY': "#000000",
+        'TEXT_SECONDARY': "#000000",
         'SUCCESS_GREEN': "#28a745",
         'WARNING_ORANGE': "#fd7e14",
         'DANGER_RED': "#dc3545",
@@ -201,7 +201,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.theme_manager = theme_manager
         self.setWindowTitle("⚙️ Configuración")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(500, 400)
         
         # ESTABLECER ÍCONO
         try:

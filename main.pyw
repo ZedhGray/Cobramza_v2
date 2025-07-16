@@ -440,7 +440,7 @@ class CobranzaApp(QWidget):
         theme = self.theme_manager.get_current_theme()
         
         card = QWidget()
-        card.setFixedSize(80, 50)
+        card.setFixedSize(120, 70)
         card.setStyleSheet(f"""
             QWidget {{
                 background: {theme['card_bg_alpha']};
@@ -462,7 +462,7 @@ class CobranzaApp(QWidget):
         icon_label.setFont(QFont("Segoe UI", 10))
         
         text_label = QLabel(label)
-        text_label.setFont(QFont("Segoe UI", 7, QFont.Weight.Medium))
+        text_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
         text_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
         
         header_layout.addWidget(icon_label)
@@ -691,7 +691,7 @@ class CobranzaApp(QWidget):
             QTableWidget {{
                 background: {theme['card_bg_alpha']};
                 border: 1px solid rgba({self.hex_to_rgb(color)}, 0.2);
-                font-size: 9px;
+                font-size: 11px;
             }}
             QTableWidget::item {{
                 padding: 6px 4px;
@@ -702,7 +702,7 @@ class CobranzaApp(QWidget):
             QTableWidget QHeaderView::section {{
                 border-bottom: 2px solid {color};
                 padding: 6px 4px;
-                font-size: 8px;
+                font-size: 10px;
             }}
         """)
         
