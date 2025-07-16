@@ -1309,7 +1309,7 @@ class TelefonoDialog(QDialog):
         self.parent = parent
         self.theme_manager = theme_manager
         self.setWindowTitle("Agregar/Actualizar Teléfono")
-        self.setFixedSize(400, 180)
+        self.setFixedSize(400, 220)
         
         # Centrar respecto al padre
         if parent:
