@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import webbrowser
+import pyodbc
 import re
 from datetime import datetime, date
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
@@ -679,7 +680,7 @@ class ClienteDetalleWindow(QWidget):
         calendar_btn.clicked.connect(self.show_calendar_dialog)
         control_layout.addWidget(calendar_btn)
         
-# Separador
+        # Separador
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.Shape.HLine)
         separator2.setStyleSheet(f"background: rgba({self.hex_to_rgb(self.get_current_colors()['TEXT_SECONDARY'])}, 0.5); margin: 10px 0;")
@@ -945,15 +946,78 @@ class ClienteDetalleWindow(QWidget):
             numero_limpio = '52' + numero_limpio
         return numero_limpio
         
+    def get_company_state(self, client_id):
+        """Obtiene el estado de empresa del cliente"""
+        try:
+            conn = get_db_connection()
+            if not conn:
+                return None
+            
+            cursor = conn.cursor()
+            cursor.execute("SELECT company FROM dbo.ClientsStates WHERE client_id = ?", (client_id,))
+            result = cursor.fetchone()
+            
+            if result:
+                return bool(result.company) if result.company is not None else False
+            else:
+                return None
+                
+        except Exception as e:
+            logging.error(f"Error al obtener estado de empresa: {e}")
+            return None
+        finally:
+            if conn:
+                conn.close()
+    
+    def update_company_state(self, client_id, is_company):
+        """Actualiza el estado de empresa del cliente"""
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Intentar UPDATE primero
+            cursor.execute("UPDATE dbo.ClientsStates SET company = ? WHERE client_id = ?", 
+                         (is_company, client_id))
+            
+            # Si no actualizó nada, hacer INSERT
+            if cursor.rowcount == 0:
+                cursor.execute("""INSERT INTO dbo.ClientsStates 
+                               (client_id, day1, day2, day3, dueday, promisePage, company)
+                               VALUES (?, 0, 0, 0, 0, 0, ?)""", 
+                             (client_id, is_company))
+            
+            conn.commit()
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error al actualizar estado de empresa: {e}")
+            return False
+        finally:
+            conn.close()
+    
     def update_company_button(self):
         """Actualiza el botón de empresa"""
-        is_company = self.get_company_state(self.client_id)
-        if is_company:
-            self.company_btn.setText("🏢 No es empresa")
+        company_state = self.get_company_state(self.client_id)
+        
+        if company_state is None:
+            # Cliente no existe en ClientsStates, mostrar estado neutro
+            self.company_btn.setText("🏢 Definir Estado Empresa")
+            self.company_btn.setProperty("class", "neutral")
+            logging.info(f"Cliente {self.client_id} sin estado definido en ClientsStates")
+        elif company_state:
+            # Es empresa
+            self.company_btn.setText("🏢 Quitar de Empresa")
             self.company_btn.setProperty("class", "danger")
+            logging.info(f"Cliente {self.client_id} es empresa")
         else:
+            # No es empresa
             self.company_btn.setText("🏢 Empresa")
             self.company_btn.setProperty("class", "")
+            logging.info(f"Cliente {self.client_id} no es empresa")
+        
         self.company_btn.style().polish(self.company_btn)
         
     def update_buro_button(self):
@@ -967,37 +1031,34 @@ class ClienteDetalleWindow(QWidget):
             self.buro_btn.setProperty("class", "")
         self.buro_btn.style().polish(self.buro_btn)
         
+    
     def toggle_company(self):
-        """Alterna el estado de empresa"""
-        conn = get_db_connection()
-        if not conn:
-            return
-            
+        """Alterna el estado de empresa del cliente"""
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT company FROM dbo.ClientsStates WHERE client_id = ?", (self.client_id,))
-            current_state = cursor.fetchone()
+            current_state = self.get_company_state(self.client_id)
             
-            if current_state is not None:
-                new_state = not bool(current_state.company)
-                cursor.execute("""
-                    UPDATE dbo.ClientsStates 
-                    SET company = ?
-                    WHERE client_id = ?
-                """, (new_state, self.client_id))
-                conn.commit()
+            if current_state is None:
+                # Cliente no existe, crear como empresa por defecto
+                new_state = True
+                logging.info(f"Cliente {self.client_id} no existía, creando como empresa")
+            else:
+                # Cliente existe, alternar estado
+                new_state = not current_state
+                logging.info(f"Cliente {self.client_id} cambiando de {current_state} a {new_state}")
+            
+            if self.update_company_state(self.client_id, new_state):
                 self.update_company_button()
                 
-                # Crear nota automática
-                status_text = "empresa" if new_state else "cliente personal"
-                note_text = f"Cliente marcado como {status_text}"
-                if self.save_note_to_db(self.client_id, note_text):
-                    self.load_client_notes()
-                    
+                estado_text = "empresa" if new_state else "no empresa"
+                QMessageBox.information(self, "Éxito", f"Cliente marcado como {estado_text}")
+                logging.info(f"Estado de empresa actualizado exitosamente para cliente {self.client_id}")
+            else:
+                QMessageBox.warning(self, "Error", "No se pudo actualizar el estado de empresa")
+                logging.error(f"Falló la actualización de estado de empresa para cliente {self.client_id}")
+                
         except Exception as e:
-            logging.error(f"Error al actualizar estado de empresa: {e}")
-        finally:
-            conn.close()
+            logging.error(f"Error en toggle_company para cliente {self.client_id}: {e}")
+            QMessageBox.critical(self, "Error", f"Error al cambiar estado de empresa: {str(e)}")
             
     def toggle_buro(self):
         """Alterna el estado de buró"""
@@ -1030,23 +1091,7 @@ class ClienteDetalleWindow(QWidget):
             logging.error(f"Error al actualizar estado de buró: {e}")
         finally:
             conn.close()
-    
-    def get_company_state(self, client_id):
-        """Obtiene el estado de empresa"""
-        try:
-            conn = get_db_connection()
-            if not conn:
-                return False
-            cursor = conn.cursor()
-            cursor.execute("SELECT company FROM dbo.ClientsStates WHERE client_id = ?", (client_id,))
-            result = cursor.fetchone()
-            return bool(result.company) if result else False
-        except:
-            return False
-        finally:
-            if conn:
-                conn.close()
-                
+              
     def get_buro_state(self, client_id):
         """Obtiene el estado de buró"""
         try:
