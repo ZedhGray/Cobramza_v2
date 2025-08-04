@@ -518,14 +518,15 @@ def update_client_states_wsp(client_id: str, states: dict = None) -> bool:
 
 def update_promise_date(client_id: str, promise_date: datetime.date) -> bool:
     """
-    Actualiza la fecha de promesa de pago para un cliente específico.
+    Actualiza o inserta la fecha de promesa de pago para un cliente específico.
+    Implementa lógica UPSERT: UPDATE si existe, INSERT si no existe.
     
     Args:
         client_id (str): ID del cliente
         promise_date (datetime.date): Nueva fecha de promesa
         
     Returns:
-        bool: True si la actualización fue exitosa, False en caso contrario
+        bool: True si la operación fue exitosa, False en caso contrario
     """
     conn = get_db_connection()
     if not conn:
@@ -534,22 +535,80 @@ def update_promise_date(client_id: str, promise_date: datetime.date) -> bool:
     
     try:
         cursor = conn.cursor()
-        query = """
+        
+        # Primero intentamos UPDATE
+        update_query = """
             UPDATE dbo.ClientsStates 
             SET promiseDate = ?
             WHERE client_id = ?
         """
-        cursor.execute(query, (promise_date, client_id))
+        
+        logging.info(f"Intentando UPDATE para cliente {client_id} con fecha {promise_date}")
+        cursor.execute(update_query, (promise_date, client_id))
+        rows_affected = cursor.rowcount
+        
+        logging.info(f"UPDATE afectó {rows_affected} filas para cliente {client_id}")
+        
+        # Si no se actualizó ninguna fila, el cliente no existe → INSERT
+        if rows_affected == 0:
+            insert_query = """
+                INSERT INTO dbo.ClientsStates (client_id, day1, day2, day3, dueday, promisePage, promiseDate)
+                VALUES (?, 0, 0, 0, 0, 0, ?)
+            """
+            
+            logging.info(f"Cliente {client_id} no existe, ejecutando INSERT con fecha {promise_date}")
+            cursor.execute(insert_query, (client_id, promise_date))
+            rows_inserted = cursor.rowcount
+            
+            logging.info(f"INSERT creó {rows_inserted} fila(s) para cliente {client_id}")
+            
+            if rows_inserted == 0:
+                logging.error(f"Error: INSERT no creó ninguna fila para cliente {client_id}")
+                return False
+            else:
+                logging.info(f"Éxito: Cliente {client_id} creado con promesa {promise_date}")
+        else:
+            logging.info(f"Éxito: Cliente {client_id} actualizado con promesa {promise_date}")
+        
+        # Confirmar transacción
         conn.commit()
-        return True
+        logging.info(f"Transacción confirmada para cliente {client_id}")
+        
+        # Verificación adicional: confirmar que el dato se guardó
+        verify_query = "SELECT promiseDate FROM dbo.ClientsStates WHERE client_id = ?"
+        cursor.execute(verify_query, (client_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            logging.info(f"Verificación exitosa: Cliente {client_id} tiene promesa {result[0]}")
+            return True
+        else:
+            logging.error(f"Verificación falló: No se encontró promesa para cliente {client_id}")
+            return False
         
     except pyodbc.Error as e:
-        logging.error(f"Error al actualizar fecha de promesa: {e}")
+        logging.error(f"Error SQL al procesar promesa para cliente {client_id}: {e}")
+        try:
+            conn.rollback()
+            logging.info(f"Rollback ejecutado para cliente {client_id}")
+        except:
+            pass
+        return False
+    except Exception as e:
+        logging.error(f"Error inesperado al procesar promesa para cliente {client_id}: {e}")
+        try:
+            conn.rollback()
+            logging.info(f"Rollback ejecutado para cliente {client_id}")
+        except:
+            pass
         return False
     finally:
-        conn.close()
-        
-        
+        try:
+            conn.close()
+            logging.info(f"Conexión cerrada para cliente {client_id}")
+        except:
+            pass
+     
 
 def sync_clients_to_buro():
     """
