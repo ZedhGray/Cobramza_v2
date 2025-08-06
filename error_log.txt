@@ -1,2 +1,2 @@
 Error al iniciar la aplicación:
-'CobranzaApp' object has no attribute 'create_dynamic_logo'
+'LOGO_FILE'

@@ -3570,7 +3570,6 @@ class CobranzaApp(QWidget):
             self.close()
             QApplication.quit()
 
-
 def main():
     try:
         # Sistema de login con Tkinter
