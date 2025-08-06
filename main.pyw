@@ -19,7 +19,13 @@ from database import (get_clients_data, get_ventas_data, get_client_states,
                      update_client_states, get_clients_without_credit, 
                      sync_clients_to_buro, validate_user, get_client_notes,
                      delete_client_states, update_client_states_wsp, 
-                     update_promise_date, update_telefono3, format_phone_number, UserSession)
+                     update_promise_date, update_telefono3, format_phone_number, UserSession, get_all_clients_data,
+                    get_all_ventas_data, 
+                    get_all_clients_credit_scores,
+                    get_credit_statistics,
+                    get_clients_by_credit_level,
+                    calculate_client_credit_score,
+                    get_credit_level)
 
 from cliente_detalle import ClienteDetalleWindow
 from login_system import LoadingSplash
@@ -134,6 +140,542 @@ class ModernCard(QFrame):
         path.addRoundedRect(0, 0, self.width(), self.height(), 16, 16)
         painter.drawPath(path)
 
+class CreditDetailWindow(QDialog):
+    """Ventana de detalle del historial crediticio de un cliente"""
+    
+    def __init__(self, parent, client_credit_data, client_id):
+        super().__init__(parent)
+        self.parent = parent
+        self.client_credit_data = client_credit_data
+        self.client_id = client_id
+        self.theme_manager = parent.theme_manager
+        
+        # CALCULAR TOTAL GASTADO
+        self.total_spent = self.calculate_total_spent()
+        
+        self.setWindowTitle(f"Historial Crediticio - {client_credit_data['client_data'].get('nombre', 'Cliente')}")
+        self.setGeometry(200, 200, 850, 650)  # Un poco más ancho para acomodar la nueva info
+        self.setModal(True)
+        
+        self.init_ui()
+        self.apply_theme()
+    
+    def calculate_total_spent(self):
+        """Calcular el total gastado por el cliente en la tienda"""
+        total_spent = 0.0
+        
+        try:
+            transactions = self.client_credit_data.get('transaction_details', [])
+            
+            for transaction in transactions:
+                # Buscar en los datos del ticket como en TicketDetailDialog
+                ticket_data = transaction.get('datos', '')
+                
+                if ticket_data:
+                    # Procesar el contenido del ticket línea por línea
+                    lines = ticket_data.split('\r\n')
+                    
+                    for line in lines:
+                        line = line.strip()
+                        
+                        # Buscar líneas que contengan "IMPORTE:" 
+                        if "IMPORTE:" in line:
+                            try:
+                                # Extraer el monto después de "IMPORTE:"
+                                # Ejemplo: "IMPORTE: $1,234.56"
+                                importe_part = line.split("IMPORTE:")[-1].strip()
+                                # Limpiar el texto para obtener solo el número
+                                importe_clean = importe_part.replace('$', '').replace(',', '').strip()
+                                
+                                # Convertir a float
+                                monto = float(importe_clean)
+                                total_spent += monto
+                                break  # Solo tomar el primer IMPORTE encontrado en este ticket
+                                
+                            except (ValueError, IndexError):
+                                # Si no se puede extraer el monto de esta línea, continuar
+                                continue
+                
+                # Si no encontramos datos en 'datos', intentar con los campos originales como fallback
+                else:
+                    monto = transaction.get('monto', 0) or transaction.get('importe', 0) or transaction.get('total', 0)
+                    
+                    if isinstance(monto, (int, float)):
+                        total_spent += monto
+                    elif isinstance(monto, str):
+                        try:
+                            total_spent += float(monto.replace(',', '').replace('$', ''))
+                        except (ValueError, AttributeError):
+                            continue
+            
+            # Si aún no encontramos montos, buscar en ventas_data como último recurso
+            if total_spent == 0 and hasattr(self.parent, 'all_ventas_data'):
+                for venta_id, venta_data in self.parent.all_ventas_data.items():
+                    if venta_data.get('cveCte') == self.client_id:
+                        monto = venta_data.get('importe', 0) or venta_data.get('total', 0)
+                        if isinstance(monto, (int, float)):
+                            total_spent += monto
+                        elif isinstance(monto, str):
+                            try:
+                                total_spent += float(monto.replace(',', '').replace('$', ''))
+                            except (ValueError, AttributeError):
+                                continue
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error calculando total gastado para cliente {self.client_id}: {e}")
+            total_spent = 0.0
+        
+        return total_spent
+
+    def extract_amount_from_ticket_data(self, ticket_data):
+        """Extraer el monto de los datos del ticket (método auxiliar)"""
+        if not ticket_data:
+            return 0.0
+        
+        try:
+            lines = ticket_data.split('\r\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Buscar líneas que contengan "IMPORTE:" 
+                if "IMPORTE:" in line:
+                    try:
+                        # Extraer el monto después de "IMPORTE:"
+                        importe_part = line.split("IMPORTE:")[-1].strip()
+                        # Limpiar el texto para obtener solo el número
+                        importe_clean = importe_part.replace('$', '').replace(',', '').strip()
+                        
+                        # Convertir a float
+                        return float(importe_clean)
+                        
+                    except (ValueError, IndexError):
+                        continue
+        except Exception:
+            pass
+        
+        return 0.0
+    
+    
+    
+    def init_ui(self):
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # Header con información del cliente
+        self.create_client_header(layout)
+        
+        # Información del puntaje Y TOTAL GASTADO
+        self.create_score_info(layout)
+        
+        # Tabla de transacciones
+        self.create_transactions_table(layout)
+        
+        # Botones
+        self.create_buttons(layout)
+        
+        self.setLayout(layout)
+    
+    def create_client_header(self, layout):
+        """Crear header con información del cliente"""
+        colors = self.parent.get_current_colors()
+        
+        header_frame = ModernCard(self.theme_manager)
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Información del cliente
+        client_info = QVBoxLayout()
+        
+        name_label = QLabel(self.client_credit_data['client_data'].get('nombre', 'Sin nombre'))
+        name_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        name_label.setStyleSheet(f"color: {colors['TEXT_PRIMARY']};")
+        
+        id_label = QLabel(f"ID: {self.client_id}")
+        id_label.setFont(QFont("Segoe UI", 10))
+        id_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        client_info.addWidget(name_label)
+        client_info.addWidget(id_label)
+        
+        header_layout.addLayout(client_info)
+        header_layout.addStretch()
+        
+        # AGREGAR TOTAL GASTADO EN EL HEADER
+        spent_section = QVBoxLayout()
+        spent_section.setAlignment(Qt.AlignmentFlag.AlignRight)
+        
+        spent_label = QLabel("💰 Total Gastado")
+        spent_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        spent_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        spent_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        
+        spent_amount = QLabel(f"${self.total_spent:,.2f}")
+        spent_amount.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        spent_amount.setStyleSheet(f"color: {colors['SUCCESS_GREEN']};")
+        spent_amount.setAlignment(Qt.AlignmentFlag.AlignRight)
+        
+        spent_section.addWidget(spent_label)
+        spent_section.addWidget(spent_amount)
+        
+        header_layout.addLayout(spent_section)
+        
+        header_frame.setLayout(header_layout)
+        layout.addWidget(header_frame)
+    
+    def create_score_info(self, layout):
+        """Crear información del puntaje crediticio con estadísticas extendidas"""
+        colors = self.parent.get_current_colors()
+        
+        score_frame = ModernCard(self.theme_manager)
+        score_layout = QHBoxLayout()
+        score_layout.setContentsMargins(15, 15, 15, 15)
+        score_layout.setSpacing(20)
+        
+        credit_level = self.client_credit_data['credit_level']
+        
+        # Puntaje principal
+        score_section = QVBoxLayout()
+        
+        score_label = QLabel(str(self.client_credit_data['credit_score']))
+        score_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        score_label.setStyleSheet(f"color: {credit_level['color']};")
+        score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        score_text = QLabel("PUNTOS")
+        score_text.setFont(QFont("Segoe UI", 10))
+        score_text.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        score_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        score_section.addWidget(score_label)
+        score_section.addWidget(score_text)
+        
+        # Nivel de crédito
+        level_section = QVBoxLayout()
+        
+        level_icon = QLabel(credit_level['icon'])
+        level_icon.setFont(QFont("Segoe UI", 20))
+        level_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        level_name = QLabel(credit_level['name'])
+        level_name.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        level_name.setStyleSheet(f"color: {credit_level['color']};")
+        level_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        level_desc = QLabel(credit_level['description'])
+        level_desc.setFont(QFont("Segoe UI", 9))
+        level_desc.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        level_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        level_section.addWidget(level_icon)
+        level_section.addWidget(level_name)
+        level_section.addWidget(level_desc)
+        
+        # Estadísticas básicas
+        stats_section = QVBoxLayout()
+        
+        trans_label = QLabel(f"📊 {self.client_credit_data['transactions']} Transacciones")
+        trans_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        trans_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        avg_label = QLabel(f"⏱️ Promedio: {self.client_credit_data['avg_payment_days']} días")
+        avg_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        avg_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        stats_section.addWidget(trans_label)
+        stats_section.addWidget(avg_label)
+        
+        # NUEVAS ESTADÍSTICAS FINANCIERAS
+        financial_section = QVBoxLayout()
+        
+        # Promedio por compra
+        if self.client_credit_data['transactions'] > 0:
+            avg_per_purchase = self.total_spent / self.client_credit_data['transactions']
+            avg_purchase_label = QLabel(f"💳 Promedio por compra: ${avg_per_purchase:,.0f}")
+        else:
+            avg_purchase_label = QLabel("💳 Promedio por compra: $0")
+        
+        avg_purchase_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        avg_purchase_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        # Saldo actual (si tiene deuda)
+        current_debt = self.client_credit_data['client_data'].get('saldo', 0)
+        if current_debt > 0:
+            debt_label = QLabel(f"⚠️ Saldo pendiente: ${current_debt:,.2f}")
+            debt_label.setStyleSheet(f"color: {colors['WARNING_ORANGE']};")
+        else:
+            debt_label = QLabel("✅ Sin saldo pendiente")
+            debt_label.setStyleSheet(f"color: {colors['SUCCESS_GREEN']};")
+        
+        debt_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        
+        financial_section.addWidget(avg_purchase_label)
+        financial_section.addWidget(debt_label)
+        
+        score_layout.addLayout(score_section)
+        score_layout.addLayout(level_section)
+        score_layout.addLayout(stats_section)
+        score_layout.addLayout(financial_section)
+        score_layout.addStretch()
+        
+        score_frame.setLayout(score_layout)
+        layout.addWidget(score_frame)
+    
+    def create_transactions_table(self, layout):
+        """Crear tabla de transacciones con columna de monto"""
+        colors = self.parent.get_current_colors()
+        
+        # Título con total de transacciones
+        title_layout = QHBoxLayout()
+        
+        title_label = QLabel("📋 Historial de Transacciones")
+        title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        title_label.setStyleSheet(f"color: {colors['TEXT_PRIMARY']};")
+        
+        count_label = QLabel(f"({len(self.client_credit_data.get('transaction_details', []))} registros)")
+        count_label.setFont(QFont("Segoe UI", 10))
+        count_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(count_label)
+        title_layout.addStretch()
+        
+        layout.addLayout(title_layout)
+        
+        # Tabla con nueva columna de MONTO
+        self.transactions_table = QTableWidget()
+        self.transactions_table.setColumnCount(7)  # Agregamos una columna más
+        self.transactions_table.setHorizontalHeaderLabels([
+            'Folio', 'Fecha Venta', 'Fecha Pago', 'Monto', 'Días', 'Puntos', 'Estado'
+        ])
+        
+        self.transactions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.transactions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Configurar columnas
+        header = self.transactions_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)  # Folio
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)  # Fecha Venta
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)  # Fecha Pago
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)  # Monto
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)  # Días
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # Puntos
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch) # Estado
+        
+        self.transactions_table.setColumnWidth(0, 80)   # Folio
+        self.transactions_table.setColumnWidth(1, 90)   # Fecha Venta
+        self.transactions_table.setColumnWidth(2, 90)   # Fecha Pago
+        self.transactions_table.setColumnWidth(3, 100)  # Monto
+        self.transactions_table.setColumnWidth(4, 60)   # Días
+        self.transactions_table.setColumnWidth(5, 70)   # Puntos
+        
+        # Poblar tabla
+        self.populate_transactions_table()
+        
+        layout.addWidget(self.transactions_table)
+    
+    def populate_transactions_table(self):
+        """Poblar tabla con transacciones del cliente incluyendo montos"""
+        from datetime import datetime
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QFont, QColor
+        from PyQt6.QtWidgets import QTableWidgetItem
+        
+        transactions = self.client_credit_data.get('transaction_details', [])
+        
+        self.transactions_table.setRowCount(len(transactions))
+        
+        for row, transaction in enumerate(transactions):
+            try:
+                # Folio
+                folio_item = QTableWidgetItem(transaction.get('folio', 'N/A'))
+                folio_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                folio_item.setFont(QFont("Segoe UI", 9))
+                self.transactions_table.setItem(row, 0, folio_item)
+                
+                # Fecha venta
+                fecha_venta = transaction.get('fecha_venta', 'N/A')
+                if fecha_venta != 'N/A':
+                    try:
+                        fecha_dt = datetime.strptime(fecha_venta, '%Y-%m-%d')
+                        fecha_venta = fecha_dt.strftime('%d/%m/%Y')
+                    except:
+                        pass
+                
+                fecha_venta_item = QTableWidgetItem(fecha_venta)
+                fecha_venta_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                fecha_venta_item.setFont(QFont("Segoe UI", 9))
+                self.transactions_table.setItem(row, 1, fecha_venta_item)
+                
+                # Fecha pago
+                fecha_pago = transaction.get('fecha_pago', 'Pendiente')
+                if fecha_pago != 'Pendiente' and fecha_pago != 'N/A':
+                    try:
+                        fecha_dt = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                        fecha_pago = fecha_dt.strftime('%d/%m/%Y')
+                    except:
+                        pass
+                
+                fecha_pago_item = QTableWidgetItem(fecha_pago)
+                fecha_pago_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                fecha_pago_item.setFont(QFont("Segoe UI", 9))
+                self.transactions_table.setItem(row, 2, fecha_pago_item)
+                
+                # MONTO DE LA TRANSACCIÓN - extraer de los datos del ticket
+                monto = self.extract_amount_from_ticket_data(transaction.get('datos', ''))
+                
+                # Si no se pudo extraer de los datos del ticket, usar los campos originales
+                if monto == 0:
+                    monto = transaction.get('monto', 0) or transaction.get('importe', 0) or transaction.get('total', 0)
+                    if isinstance(monto, str):
+                        try:
+                            monto = float(monto.replace(',', '').replace('$', ''))
+                        except (ValueError, AttributeError):
+                            monto = 0
+                
+                monto_item = QTableWidgetItem(f"${monto:,.0f}")
+                monto_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                monto_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Medium))
+                monto_item.setForeground(QColor('#22C55E'))  # Verde para montos
+                self.transactions_table.setItem(row, 3, monto_item)
+                
+                # Días
+                days_item = QTableWidgetItem(str(transaction.get('days', 'N/A')))
+                days_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                days_item.setFont(QFont("Segoe UI", 9))
+                self.transactions_table.setItem(row, 4, days_item)
+                
+                # Puntos
+                points = transaction.get('points', 0)
+                points_item = QTableWidgetItem(str(points))
+                points_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                points_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                
+                # Color según puntos
+                if points > 0:
+                    points_item.setForeground(QColor('#22C55E'))
+                elif points < 0:
+                    points_item.setForeground(QColor('#EF4444'))
+                else:
+                    points_item.setForeground(QColor('#6B7280'))
+                
+                self.transactions_table.setItem(row, 5, points_item)
+                
+                # Estado
+                estado_item = QTableWidgetItem(transaction.get('estado', 'N/A'))
+                estado_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                estado_item.setFont(QFont("Segoe UI", 9))
+                self.transactions_table.setItem(row, 6, estado_item)
+                
+            except Exception as e:
+                import logging
+                logging.error(f"Error poblando transacción {row}: {e}")
+                continue
+    
+    def create_buttons(self, layout):
+        """Crear botones de la ventana"""
+        buttons_layout = QHBoxLayout()
+        
+        # Botón para exportar historial (opcional)
+        export_button = QPushButton("📊 Exportar Historial")
+        export_button.setFixedHeight(35)
+        export_button.clicked.connect(self.export_history)
+        
+        close_button = QPushButton("Cerrar")
+        close_button.setFixedHeight(35)
+        close_button.clicked.connect(self.close)
+        
+        buttons_layout.addWidget(export_button)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(close_button)
+        
+        layout.addLayout(buttons_layout)
+    
+    def export_history(self):
+        """Exportar historial del cliente (función opcional)"""
+        try:
+            client_name = self.client_credit_data['client_data'].get('nombre', 'Cliente')
+            filename = f"historial_crediticio_{client_name}_{self.client_id}.txt"
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(f"HISTORIAL CREDITICIO - {client_name}\n")
+                f.write(f"ID Cliente: {self.client_id}\n")
+                f.write(f"Puntaje Crediticio: {self.client_credit_data['credit_score']} puntos\n")
+                f.write(f"Nivel: {self.client_credit_data['credit_level']['name']}\n")
+                f.write(f"Total Gastado: ${self.total_spent:,.2f}\n")
+                f.write(f"Transacciones: {self.client_credit_data['transactions']}\n")
+                f.write(f"Promedio de pago: {self.client_credit_data['avg_payment_days']} días\n")
+                f.write("\n" + "="*50 + "\n")
+                f.write("DETALLE DE TRANSACCIONES\n")
+                f.write("="*50 + "\n")
+                
+                for transaction in self.client_credit_data.get('transaction_details', []):
+                    f.write(f"Folio: {transaction.get('folio', 'N/A')}\n")
+                    f.write(f"Fecha Venta: {transaction.get('fecha_venta', 'N/A')}\n")
+                    f.write(f"Fecha Pago: {transaction.get('fecha_pago', 'Pendiente')}\n")
+                    f.write(f"Monto: ${transaction.get('monto', 0):,.2f}\n")
+                    f.write(f"Días: {transaction.get('days', 'N/A')}\n")
+                    f.write(f"Puntos: {transaction.get('points', 0)}\n")
+                    f.write("-" * 30 + "\n")
+            
+            QMessageBox.information(self, "✅ Éxito", f"Historial exportado a:\n{filename}")
+            
+        except Exception as e:
+            logging.error(f"Error exportando historial: {e}")
+            QMessageBox.critical(self, "❌ Error", f"Error al exportar historial:\n{str(e)}")
+    
+    def apply_theme(self):
+        """Aplicar tema a la ventana"""
+        colors = self.parent.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {theme['gradient_start']}, stop:0.3 {theme['gradient_mid1']}, 
+                    stop:0.7 {theme['gradient_mid2']}, stop:1 {theme['gradient_end']});
+                color: {colors['TEXT_PRIMARY']};
+            }}
+            
+            QTableWidget {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid {theme['border_alpha']};
+                border-radius: 8px;
+                font-size: 10px;
+            }}
+            
+            QTableWidget::item {{
+                padding: 6px 4px;
+                border-bottom: 1px solid {theme['border_alpha']};
+            }}
+            
+            QTableWidget QHeaderView::section {{
+                background: {theme['card_bg_alpha']};
+                color: {colors['TEXT_PRIMARY']};
+                padding: 6px 4px;
+                border: none;
+                border-right: 1px solid {theme['border_alpha']};
+                border-bottom: 2px solid {colors['BRIGHT_CYAN']};
+                font-weight: 600;
+                font-size: 9px;
+            }}
+            
+            QPushButton {{
+                background: {colors['BRIGHT_CYAN']};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 600;
+            }}
+            
+            QPushButton:hover {{
+                background: rgba({self.parent.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.8);
+            }}
+        """)
+
 class CobranzaApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -165,12 +707,25 @@ class CobranzaApp(QWidget):
         self.ventas_data = {}
         self.client_states = {}
         self.clients_buro = {}
-        self.last_update_time = time.time()
         
+        #credits
+        self.all_clients_data = {}
+        self.all_ventas_data = {}
+        self.clients_credit_scores = {}
+        self.credit_statistics = {}
+        self.credit_data_loaded = False  # ← NUEVA BANDERA
+        self.credit_data_loading = False  # ← EVITAR CARGAS MÚLTIPLES
+        self.top_clients_data_loaded = False
+        self.top_clients_data_loading = False
+        self.all_clients_spending = {}  # {client_id: total_spent}
+        self.current_top_view = "clientes"  # clientes o empresas
+        
+        self.current_credit_view = "clientes"
+        self.last_update_time = time.time()
         self.data_loaded = False
         
         self.initUI()
-        self.load_data()
+        self.load_data()  # Solo carga datos principales
         self.setup_auto_update()
 
     def get_current_colors(self):
@@ -190,6 +745,7 @@ class CobranzaApp(QWidget):
             'DANGER_RED': theme['DANGER_RED'],
             'PROMISE_PURPLE': theme['PROMISE_PURPLE']
         }
+    
     def initUI(self):
         self.setWindowTitle(f"Sistema de Cobranza {version}")
         self.setGeometry(100, 100, 1600, 1000)
@@ -498,7 +1054,7 @@ class CobranzaApp(QWidget):
         nav_layout = QHBoxLayout()
         nav_layout.setSpacing(12)
         
-        # Botones de navegación más pequeños
+        # Botones existentes
         self.clientes_btn = ModernButton("CRÉDITOS PERSONALES", self.theme_manager)
         self.clientes_btn.setCheckable(True)
         self.clientes_btn.setChecked(True)
@@ -512,6 +1068,19 @@ class CobranzaApp(QWidget):
         self.empresas_btn.setFixedWidth(220)
         self.empresas_btn.clicked.connect(lambda: self.switch_view("empresas"))
         
+        self.creditos_btn = ModernButton("SISTEMA DE CRÉDITOS", self.theme_manager)
+        self.creditos_btn.setCheckable(True)
+        self.creditos_btn.setFixedHeight(35)
+        self.creditos_btn.setFixedWidth(180)
+        self.creditos_btn.clicked.connect(lambda: self.switch_view("creditos"))
+        
+        # NUEVO BOTÓN TOP CLIENTES
+        self.top_btn = ModernButton("TOP CLIENTES", self.theme_manager)
+        self.top_btn.setCheckable(True)
+        self.top_btn.setFixedHeight(35)
+        self.top_btn.setFixedWidth(140)
+        self.top_btn.clicked.connect(lambda: self.switch_view("top"))
+        
         self.buro_btn = ModernButton("BURÓ DE CRÉDITO", self.theme_manager)
         self.buro_btn.setCheckable(True)
         self.buro_btn.setFixedHeight(35)
@@ -520,12 +1089,14 @@ class CobranzaApp(QWidget):
         
         nav_layout.addWidget(self.clientes_btn)
         nav_layout.addWidget(self.empresas_btn)
+        nav_layout.addWidget(self.creditos_btn)
+        nav_layout.addWidget(self.top_btn)  # AGREGAR AQUÍ
         nav_layout.addWidget(self.buro_btn)
         nav_layout.addStretch()
         
         nav_frame.setLayout(nav_layout)
         layout.addWidget(nav_frame)
-
+    
     def create_main_content(self, layout):
         """Crear área principal de contenido - más compacta"""
         self.main_frame = QWidget()
@@ -862,7 +1433,1037 @@ class CobranzaApp(QWidget):
         buro_card.setLayout(buro_layout)
         self.main_layout.addWidget(buro_card)
 
-    # Resto de métodos existentes (sin cambios significativos, solo ajustando referencias de colores)
+    def create_creditos_view(self):
+        """Crear vista del sistema de créditos - CON CARGA BAJO DEMANDA"""
+        # PRIMER PASO: Verificar si necesitamos cargar datos de créditos
+        if not self.credit_data_loaded:
+            # Mostrar indicador de carga
+            self.show_credit_loading_indicator()
+            
+            # Procesar eventos para mostrar la interfaz
+            QApplication.processEvents()
+            
+            # Cargar datos en segundo plano
+            if not self.load_credit_data():
+                # Si falla la carga, mostrar error y volver a vista anterior
+                self.switch_view("clientes")
+                return
+        
+        # SEGUNDO PASO: Crear la vista normalmente
+        self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
+        
+        # Verificar si los datos están disponibles
+        if not self.clients_credit_scores:
+            error_container = ModernCard(self.theme_manager)
+            error_container.setFixedHeight(200)
+            error_layout = QVBoxLayout()
+            error_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            error_label = QLabel("❌ No se pudieron cargar los datos crediticios")
+            error_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Medium))
+            error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            error_label.setStyleSheet(f"color: {colors['DANGER_RED']}; margin: 30px;")
+            
+            retry_button = QPushButton("🔄 Reintentar")
+            retry_button.setFont(QFont("Segoe UI", 12))
+            retry_button.clicked.connect(self.retry_credit_data_load)
+            
+            error_layout.addWidget(error_label)
+            error_layout.addWidget(retry_button)
+            error_container.setLayout(error_layout)
+            self.main_layout.addWidget(error_container)
+            return
+        
+        # Sub-navegación FIJA (se crea una sola vez)
+        self.create_credit_sub_navigation()
+        
+        # Contenido que cambia según la vista
+        self.create_credit_content()
+    
+    def retry_credit_data_load(self):
+        """Reintentar carga de datos crediticios"""
+        self.credit_data_loaded = False
+        self.credit_data_loading = False
+        self.create_creditos_view()
+    
+   
+    def create_credit_statistics_header(self):
+        """Crear header con estadísticas del sistema de créditos"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        header_card = ModernCard(self.theme_manager)
+        header_card.setFixedHeight(120)
+        header_layout = QVBoxLayout()
+        header_layout.setContentsMargins(20, 15, 20, 15)
+        header_layout.setSpacing(10)
+        
+        # Título principal
+        title_layout = QHBoxLayout()
+        
+        title_layout.addStretch()
+        
+        # Estadísticas generales
+        stats = self.credit_statistics
+        
+        stats_section = QHBoxLayout()
+        stats_section.setSpacing(20)
+        
+        
+        title_layout.addLayout(stats_section)
+        
+        header_layout.addLayout(title_layout)
+        
+        # Distribución por niveles (compacta)
+        distribution_layout = QHBoxLayout()
+        distribution_layout.setSpacing(15)
+        
+        by_level = stats.get('by_level', {})
+        
+        # Crear indicadores compactos para cada nivel
+        levels = [
+            ('DORADO', '🥇', '#FFD700'),
+            ('VERDE', '✅', '#22C55E'),
+            ('AMARILLO', '⚠️', '#EAB308'),
+            ('NARANJA', '🔶', '#F97316'),
+            ('ROJO', '🚫', '#EF4444')
+        ]
+        
+        for level_name, icon, color in levels:
+            count = by_level.get(level_name, 0)
+            
+            level_widget = QWidget()
+            level_widget.setFixedWidth(80)
+            level_layout = QVBoxLayout()
+            level_layout.setContentsMargins(5, 5, 5, 5)
+            level_layout.setSpacing(2)
+            
+            icon_label = QLabel(icon)
+            icon_label.setFont(QFont("Segoe UI", 12))
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            count_label = QLabel(str(count))
+            count_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            count_label.setStyleSheet(f"color: {color};")
+            count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            name_label = QLabel(level_name[:3])  # Solo primeras 3 letras
+            name_label.setFont(QFont("Segoe UI", 8))
+            name_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+            name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            level_layout.addWidget(icon_label)
+            level_layout.addWidget(count_label)
+            level_layout.addWidget(name_label)
+            
+            level_widget.setLayout(level_layout)
+            distribution_layout.addWidget(level_widget)
+        
+        distribution_layout.addStretch()
+        header_layout.addLayout(distribution_layout)
+        
+        header_card.setLayout(header_layout)
+        self.main_layout.addWidget(header_card)
+
+    def create_credit_levels_grid(self):
+        """Crear grid con las 5 categorías de crédito"""
+        colors = self.get_current_colors()
+        
+        # Contenedor principal
+        grid_widget = QWidget()
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(15)
+        
+        # Definir los niveles de crédito
+        levels = [
+            {
+                'name': 'DORADO',
+                'icon': '🥇',
+                'color': '#FFD700',
+                'description': 'Crédito Alto',
+                'range': '1000+ pts',
+                'position': (0, 0)
+            },
+            {
+                'name': 'VERDE', 
+                'icon': '✅',
+                'color': '#22C55E',
+                'description': 'Crédito Normal',
+                'range': '600-999 pts',
+                'position': (0, 1)
+            },
+            {
+                'name': 'AMARILLO',
+                'icon': '⚠️', 
+                'color': '#EAB308',
+                'description': 'Crédito a Revisión',
+                'range': '400-599 pts',
+                'position': (0, 2)
+            },
+            {
+                'name': 'NARANJA',
+                'icon': '🔶',
+                'color': '#F97316', 
+                'description': 'Crédito de Riesgo',
+                'range': '200-399 pts',
+                'position': (1, 0)
+            },
+            {
+                'name': 'ROJO',
+                'icon': '🚫',
+                'color': '#EF4444',
+                'description': 'Sin Crédito - Buró',
+                'range': '0-199 pts',
+                'position': (1, 1)
+            }
+        ]
+        
+        # Crear tabla para cada nivel
+        for level in levels:
+            self.create_credit_level_table(
+                grid_layout, 
+                level['name'],
+                level['icon'], 
+                level['color'],
+                level['description'],
+                level['range'],
+                level['position'][0],
+                level['position'][1]
+            )
+        
+        # Espacio vacío en la última posición
+        empty_widget = QWidget()
+        grid_layout.addWidget(empty_widget, 1, 2)
+        
+        grid_widget.setLayout(grid_layout)
+        self.main_layout.addWidget(grid_widget)
+
+    def create_credit_level_table(self, layout, level_name, icon, color, description, point_range, row, col):
+        """Crear tabla para un nivel de crédito específico"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        # Filtrar clientes por nivel
+        clients_in_level = {
+            client_id: data for client_id, data in self.clients_credit_scores.items()
+            if data['credit_level']['name'] == level_name
+        }
+        
+        # Crear card
+        level_card = ModernCard(self.theme_manager)
+        level_card.setMinimumHeight(350)
+        level_card.setMaximumHeight(450)
+        
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(15, 15, 15, 15)
+        card_layout.setSpacing(10)
+        
+        # Header del nivel
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(5)
+        
+        # Título con ícono
+        title_layout = QHBoxLayout()
+        
+        icon_label = QLabel(icon)
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
+        name_label = QLabel(level_name)
+        name_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        name_label.setStyleSheet(f"color: {color};")
+        
+        count_label = QLabel(f"({len(clients_in_level)})")
+        count_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        count_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(name_label)
+        title_layout.addWidget(count_label)
+        title_layout.addStretch()
+        
+        # Descripción y rango
+        desc_label = QLabel(f"{description} • {point_range}")
+        desc_label.setFont(QFont("Segoe UI", 9))
+        desc_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        header_layout.addLayout(title_layout)
+        header_layout.addWidget(desc_label)
+        
+        card_layout.addLayout(header_layout)
+        
+        # Tabla de clientes
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(['Cliente', 'Puntaje', 'Transacciones', 'Promedio Días'])
+        
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Configurar columnas
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        
+        table.setColumnWidth(1, 80)
+        table.setColumnWidth(2, 90)
+        table.setColumnWidth(3, 90)
+        
+        table.setMaximumHeight(250)
+        table.setMinimumHeight(180)
+        
+        # Estilo específico
+        table.setStyleSheet(f"""
+            QTableWidget {{
+                background: rgba({self.hex_to_rgb(color)}, 0.05);
+                border: 1px solid rgba({self.hex_to_rgb(color)}, 0.2);
+                font-size: 10px;
+            }}
+            QTableWidget::item {{
+                padding: 6px 4px;
+            }}
+            QTableWidget::item:selected {{
+                background: rgba({self.hex_to_rgb(color)}, 0.3);
+            }}
+            QTableWidget QHeaderView::section {{
+                border-bottom: 2px solid {color};
+                padding: 6px 4px;
+                font-size: 9px;
+            }}
+        """)
+        
+        # Poblar tabla
+        self.populate_credit_level_table(table, clients_in_level, color)
+        
+        card_layout.addWidget(table)
+        level_card.setLayout(card_layout)
+        
+        layout.addWidget(level_card, row, col)
+
+    def populate_credit_level_table(self, table, clients_in_level, color):
+        """Poblar tabla con clientes del nivel específico"""
+        # Ordenar clientes por puntaje descendente
+        sorted_clients = sorted(
+            clients_in_level.items(), 
+            key=lambda x: x[1]['credit_score'], 
+            reverse=True
+        )
+        
+        table.setRowCount(len(sorted_clients))
+        
+        for row, (client_id, client_data) in enumerate(sorted_clients):
+            try:
+                # Nombre del cliente (truncado)
+                nombre = client_data['client_data'].get('nombre', 'Sin nombre')
+                if len(nombre) > 20:
+                    nombre = nombre[:17] + "..."
+                
+                name_item = QTableWidgetItem(nombre)
+                name_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                name_item.setData(Qt.ItemDataRole.UserRole, client_id)
+                name_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Medium))
+                name_item.setToolTip(client_data['client_data'].get('nombre', 'Sin nombre'))
+                table.setItem(row, 0, name_item)
+                
+                # Puntaje
+                score_item = QTableWidgetItem(str(client_data['credit_score']))
+                score_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                score_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                score_item.setForeground(QColor(color))
+                table.setItem(row, 1, score_item)
+                
+                # Número de transacciones
+                trans_item = QTableWidgetItem(str(client_data['transactions']))
+                trans_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                trans_item.setFont(QFont("Segoe UI", 8))
+                table.setItem(row, 2, trans_item)
+                
+                # Promedio de días
+                avg_days = client_data['avg_payment_days']
+                avg_item = QTableWidgetItem(f"{avg_days}d")
+                avg_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                avg_item.setFont(QFont("Segoe UI", 8))
+                table.setItem(row, 3, avg_item)
+                
+                # Color de fondo sutil
+                bg_color = QColor(color)
+                bg_color.setAlpha(20)
+                
+                for col_idx in range(4):
+                    item = table.item(row, col_idx)
+                    if item:
+                        item.setBackground(bg_color)
+                        
+            except Exception as e:
+                logging.error(f"Error poblando fila {row}: {e}")
+                continue
+        
+        # Conectar evento de doble clic
+        table.cellDoubleClicked.connect(lambda row, col: self.on_credit_client_double_click(table, row))
+
+    def on_credit_client_double_click(self, table, row):
+        """Maneja el doble clic en un cliente de la vista de créditos"""
+        try:
+            name_item = table.item(row, 0)
+            if name_item:
+                client_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if client_id and client_id in self.clients_credit_scores:
+                    client_credit_data = self.clients_credit_scores[client_id]
+                    self.credit_detail_window = CreditDetailWindow(self, client_credit_data, client_id)
+                    self.credit_detail_window.show()
+                else:
+                    QMessageBox.warning(self, "⚠️ Error", "No se pudo obtener la información crediticia del cliente")
+        except Exception as e:
+            logging.error(f"Error al abrir detalles crediticios del cliente: {e}")
+            QMessageBox.critical(self, "❌ Error", f"Error al abrir detalles crediticios: {str(e)}")
+        
+    def create_credit_sub_navigation(self):
+        """Crear sub-navegación SIMPLE con buscador - TODO EN UNA LÍNEA"""
+        colors = self.get_current_colors()
+        
+        nav_frame = ModernCard(self.theme_manager)
+        nav_frame.setFixedHeight(70)  # Reducir altura ya que solo hay una fila
+        nav_frame.setContentsMargins(20, 15, 20, 15)
+        
+        # UN SOLO LAYOUT HORIZONTAL - TODO EN UNA LÍNEA
+        nav_layout = QHBoxLayout()
+        nav_layout.setSpacing(25)  # Buen espaciado entre elementos
+        
+        # Botón Clientes
+        self.credit_clientes_btn = ModernButton("👤 CLIENTES", self.theme_manager)
+        self.credit_clientes_btn.setCheckable(True)
+        self.credit_clientes_btn.setChecked(self.current_credit_view == "clientes")
+        self.credit_clientes_btn.setFixedHeight(40)
+        self.credit_clientes_btn.setFixedWidth(160)
+        self.credit_clientes_btn.clicked.connect(lambda: self.switch_credit_view("clientes"))
+        
+        # Botón Empresas
+        self.credit_empresas_btn = ModernButton("🏢 EMPRESAS", self.theme_manager)
+        self.credit_empresas_btn.setCheckable(True)
+        self.credit_empresas_btn.setChecked(self.current_credit_view == "empresas")
+        self.credit_empresas_btn.setFixedHeight(40)
+        self.credit_empresas_btn.setFixedWidth(160)
+        self.credit_empresas_btn.clicked.connect(lambda: self.switch_credit_view("empresas"))
+        
+        # Separador visual (opcional)
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFixedHeight(30)
+        separator.setStyleSheet(f"background: rgba({self.hex_to_rgb(colors['TEXT_SECONDARY'])}, 0.3); width: 1px;")
+        
+        # BUSCADOR EN LA MISMA LÍNEA - MÁS COMPACTO
+        search_section = QHBoxLayout()
+        search_section.setSpacing(10)
+        
+        # Ícono de búsqueda
+        #search_icon = QLabel("🔍")
+        #search_icon.setFont(QFont("Segoe UI", 14))
+        #search_icon.setStyleSheet("padding: 5px;")
+        
+        # Campo de búsqueda optimizado
+        self.credit_search_input = QLineEdit()
+        self.credit_search_input.setPlaceholderText("Buscar cliente por nombre...")
+        self.credit_search_input.setFixedWidth(300)  # Un poco más compacto
+        self.credit_search_input.setFixedHeight(35)
+        self.credit_search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: rgba({self.hex_to_rgb(colors['CARD_BG'])}, 0.9);
+                border: 2px solid rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.4);
+                border-radius: 17px;
+                padding: 6px 16px;
+                color: {colors['TEXT_PRIMARY']};
+                font-size: 12px;
+                font-weight: 500;
+            }}
+            QLineEdit:focus {{
+                border: 2px solid {colors['BRIGHT_CYAN']};
+                background: rgba({self.hex_to_rgb(colors['CARD_BG'])}, 1.0);
+                box-shadow: 0 0 8px rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+            }}
+            QLineEdit:hover {{
+                border: 2px solid rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.6);
+            }}
+        """)
+        
+        # Conectar búsqueda en tiempo real
+        self.credit_search_input.textChanged.connect(self.on_credit_search_changed)
+        
+        # Botón limpiar búsqueda más pequeño
+        clear_btn = QPushButton("✕")
+        clear_btn.setFixedSize(30, 30)
+        clear_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba({self.hex_to_rgb(colors['TEXT_SECONDARY'])}, 0.4);
+                color: {colors['TEXT_SECONDARY']};
+                border: none;
+                border-radius: 15px;
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background: rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.6);
+                color: white;
+            }}
+            QPushButton:pressed {{
+                background: rgba({self.hex_to_rgb(colors['DANGER_RED'])}, 0.8);
+            }}
+        """)
+        clear_btn.clicked.connect(self.clear_credit_search)
+        clear_btn.setToolTip("Limpiar búsqueda")
+        
+        # Agregar elementos del buscador al layout de búsqueda
+        #search_section.addWidget(search_icon)
+        search_section.addWidget(self.credit_search_input)
+        search_section.addWidget(clear_btn)
+        
+        # AGREGAR TODO AL LAYOUT PRINCIPAL HORIZONTAL
+        nav_layout.addWidget(self.credit_clientes_btn)
+        nav_layout.addWidget(self.credit_empresas_btn)
+        nav_layout.addWidget(separator)
+        nav_layout.addLayout(search_section)
+        nav_layout.addStretch()  # Empujar todo hacia la izquierda
+        
+        nav_frame.setLayout(nav_layout)
+        self.main_layout.addWidget(nav_frame)
+
+
+    def on_credit_search_changed(self, text):
+        """Manejar cambios en el campo de búsqueda de créditos"""
+        # Buscar en tiempo real mientras el usuario escribe
+        self.current_search_text = text.strip().lower()
+        
+        # Solo buscar si hay al menos 2 caracteres o está vacío (mostrar todo)
+        if len(self.current_search_text) >= 2 or self.current_search_text == "":
+            self.recreate_only_credit_content()
+
+    def clear_credit_search(self):
+        """Limpiar el campo de búsqueda"""
+        self.credit_search_input.clear()
+        self.current_search_text = ""
+        self.recreate_only_credit_content()
+    
+    def switch_credit_view(self, view):
+        """Cambiar vista de créditos - SIMPLIFICADO sin estadísticas"""
+        if self.current_credit_view != view:
+            self.current_credit_view = view
+            
+            # Solo actualizar botones
+            self.credit_clientes_btn.setChecked(view == "clientes")
+            self.credit_empresas_btn.setChecked(view == "empresas")
+            
+            # Limpiar búsqueda al cambiar de vista
+            if hasattr(self, 'credit_search_input'):
+                self.credit_search_input.clear()
+                self.current_search_text = ""
+            
+            # Solo recrear el contenido (no la navegación)
+            self.recreate_only_credit_content()
+    
+    def recreate_only_credit_content(self):
+        """Recrear SOLO el contenido, mantener navegación intacta"""
+        # Encontrar el widget de contenido (debería ser el último)
+        layout_count = self.main_layout.count()
+        
+        # Eliminar solo el último widget (el contenido)
+        if layout_count > 1:
+            last_item = self.main_layout.itemAt(layout_count - 1)
+            if last_item and last_item.widget():
+                last_item.widget().deleteLater()
+                self.main_layout.removeWidget(last_item.widget())
+        
+        # Crear nuevo contenido
+        self.create_credit_content()
+    
+    def create_credit_content(self):
+        """Crear contenido filtrado según vista actual"""
+        # Contenedor principal para las tablas
+        content_widget = QWidget()
+        content_layout = QGridLayout()
+        content_layout.setSpacing(15)
+        
+        # Definir niveles de crédito
+        levels = [
+            ('DORADO', '🥇', '#FFD700', 'Crédito Alto', '1000+ pts', (0, 0)),
+            ('VERDE', '✅', '#22C55E', 'Crédito Normal', '600-999 pts', (0, 1)),
+            ('AMARILLO', '⚠️', '#EAB308', 'Crédito a Revisión', '400-599 pts', (0, 2)),
+            ('NARANJA', '🔶', '#F97316', 'Crédito de Riesgo', '200-399 pts', (1, 0)),
+            ('ROJO', '🚫', '#EF4444', 'Sin Crédito - Buró', '0-199 pts', (1, 1))
+        ]
+        
+        # Crear tabla para cada nivel
+        for level_name, icon, color, description, range_text, (row, col) in levels:
+            # Filtrar datos para este nivel y tipo actual
+            filtered_clients = self.filter_clients_for_level(level_name)
+            
+            # Crear tabla
+            level_table = self.create_simple_credit_table(
+                level_name, icon, color, description, range_text, filtered_clients
+            )
+            
+            content_layout.addWidget(level_table, row, col)
+        
+        # Widget vacío en la última posición
+        content_layout.addWidget(QWidget(), 1, 2)
+        
+        content_widget.setLayout(content_layout)
+        self.main_layout.addWidget(content_widget)
+        
+    def create_simple_credit_table(self, level_name, icon, color, description, range_text, clients_data):
+        """Crear tabla simple para un nivel de crédito CON indicador de resultados - ESPACIADO MEJORADO"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        # Card contenedor con mejor espaciado
+        card = ModernCard(self.theme_manager)
+        card.setMinimumHeight(380)  # Más altura
+        card.setMaximumHeight(480)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(18, 18, 18, 18)  # Más padding
+        layout.setSpacing(12)  # Más espacio entre elementos
+        
+        # Header con indicador de búsqueda - MEJOR ORGANIZACION
+        header_container = QWidget()
+        header_layout = QVBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(8)
+        
+        # Primera línea: Título principal
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(8)
+        
+        icon_label = QLabel(icon)
+        icon_label.setFont(QFont("Segoe UI", 18))  # Ícono más grande
+        
+        # Título con contador y indicador de búsqueda
+        search_text = getattr(self, 'current_search_text', '')
+        if search_text:
+            title_text = f"{level_name} ({len(clients_data)})"
+            search_indicator = " 🔍"
+            tooltip_text = f"Filtrando por: '{search_text}'"
+        else:
+            title_text = f"{level_name} ({len(clients_data)})"
+            search_indicator = ""
+            tooltip_text = f"Mostrando todos los {level_name.lower()}"
+        
+        title_label = QLabel(title_text + search_indicator)
+        title_label.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        title_label.setStyleSheet(f"color: {color}; padding: 2px;")
+        title_label.setToolTip(tooltip_text)
+        
+        type_indicator = QLabel("👤" if self.current_credit_view == "clientes" else "🏢")
+        type_indicator.setFont(QFont("Segoe UI", 14))
+        type_indicator.setToolTip("Clientes" if self.current_credit_view == "clientes" else "Empresas")
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(type_indicator)
+        title_layout.addStretch()
+        
+        # Segunda línea: Descripción
+        desc_label = QLabel(f"{description} • {range_text}")
+        desc_label.setFont(QFont("Segoe UI", 10))
+        desc_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']}; padding: 2px;")
+        
+        header_layout.addLayout(title_layout)
+        header_layout.addWidget(desc_label)
+        header_container.setLayout(header_layout)
+        
+        layout.addWidget(header_container)
+        
+        # Tabla con mejor espaciado
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(['Cliente', 'Puntaje', 'Transacciones', 'Promedio Días'])
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Configurar columnas
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        
+        table.setColumnWidth(1, 85)  # Más ancho
+        table.setColumnWidth(2, 95)  # Más ancho
+        table.setColumnWidth(3, 95)  # Más ancho
+        
+        table.setMaximumHeight(280)  # Más altura para la tabla
+        table.setMinimumHeight(220)
+        
+        # Estilo con indicador de búsqueda mejorado
+        border_color = color
+        if search_text:
+            border_color = colors['BRIGHT_CYAN']  # Cambiar borde cuando hay búsqueda activa
+        
+        table.setStyleSheet(f"""
+            QTableWidget {{
+                background: rgba({self.hex_to_rgb(color)}, 0.06);
+                border: 2px solid rgba({self.hex_to_rgb(border_color)}, 0.5);
+                border-radius: 8px;
+                font-size: 11px;
+                gridline-color: rgba({self.hex_to_rgb(border_color)}, 0.2);
+            }}
+            QTableWidget::item {{
+                padding: 8px 6px;
+                border-bottom: 1px solid rgba({self.hex_to_rgb(border_color)}, 0.1);
+            }}
+            QTableWidget::item:selected {{
+                background: rgba({self.hex_to_rgb(color)}, 0.4);
+                color: white;
+            }}
+            QTableWidget::item:hover {{
+                background: rgba({self.hex_to_rgb(color)}, 0.2);
+            }}
+            QTableWidget QHeaderView::section {{
+                background: rgba({self.hex_to_rgb(color)}, 0.1);
+                border: none;
+                border-right: 1px solid rgba({self.hex_to_rgb(border_color)}, 0.3);
+                border-bottom: 2px solid {border_color};
+                padding: 10px 6px;
+                font-size: 10px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }}
+            QScrollBar:vertical {{
+                background: rgba({self.hex_to_rgb(color)}, 0.1);
+                width: 8px;
+                border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: rgba({self.hex_to_rgb(color)}, 0.5);
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: rgba({self.hex_to_rgb(color)}, 0.7);
+            }}
+        """)
+        
+        # Poblar tabla
+        self.populate_simple_credit_table(table, clients_data, color)
+        
+        layout.addWidget(table)
+        card.setLayout(layout)
+        
+        return card
+
+    
+    def populate_simple_credit_table(self, table, clients_data, color):
+        """Poblar tabla con datos simples"""
+        # Ordenar por puntaje
+        sorted_clients = sorted(
+            clients_data.items(), 
+            key=lambda x: x[1]['credit_score'], 
+            reverse=True
+        )
+        
+        table.setRowCount(len(sorted_clients))
+        
+        for row, (client_id, client_data) in enumerate(sorted_clients):
+            try:
+                # Nombre
+                nombre = client_data['client_data'].get('nombre', 'Sin nombre')
+                if len(nombre) > 25:
+                    nombre = nombre[:22] + "..."
+                
+                name_item = QTableWidgetItem(nombre)
+                name_item.setData(Qt.ItemDataRole.UserRole, client_id)
+                name_item.setToolTip(client_data['client_data'].get('nombre', 'Sin nombre'))
+                table.setItem(row, 0, name_item)
+                
+                # Puntaje
+                score_item = QTableWidgetItem(str(client_data['credit_score']))
+                score_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                score_item.setForeground(QColor(color))
+                table.setItem(row, 1, score_item)
+                
+                # Transacciones
+                trans_item = QTableWidgetItem(str(client_data['transactions']))
+                trans_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                table.setItem(row, 2, trans_item)
+                
+                # Promedio días
+                avg_item = QTableWidgetItem(f"{client_data['avg_payment_days']}d")
+                avg_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                table.setItem(row, 3, avg_item)
+                
+            except Exception as e:
+                logging.error(f"Error poblando fila {row}: {e}")
+                continue
+        
+        # Conectar doble clic
+        table.cellDoubleClicked.connect(lambda row, col: self.on_credit_client_double_click(table, row))
+    
+    def filter_clients_for_level(self, level_name):
+        """Filtrar clientes por nivel Y tipo actual Y búsqueda"""
+        filtered = {}
+        
+        # Obtener texto de búsqueda actual
+        search_text = getattr(self, 'current_search_text', '').lower()
+        
+        for client_id, credit_data in self.clients_credit_scores.items():
+            # Verificar si es del nivel correcto
+            if credit_data['credit_level']['name'] != level_name:
+                continue
+            
+            # Verificar si es del tipo correcto (cliente/empresa)
+            client_state = self.client_states.get(client_id, {})
+            is_company = client_state.get('company', False)
+            
+            if self.current_credit_view == "clientes" and is_company:
+                continue
+            elif self.current_credit_view == "empresas" and not is_company:
+                continue
+            
+            # FILTRAR POR BÚSQUEDA DE NOMBRE
+            if search_text:
+                client_name = credit_data['client_data'].get('nombre', '').lower()
+                if search_text not in client_name:
+                    continue
+            
+            filtered[client_id] = credit_data
+        
+        return filtered
+    
+    def clear_layout_from_index(self, start_index):
+        """Limpiar layout desde un índice específico"""
+        while self.main_layout.count() > start_index:
+            child = self.main_layout.takeAt(start_index)
+            if child.widget():
+                child.widget().deleteLater()
+    
+    def get_current_credit_stats(self):
+        """Obtener estadísticas para la vista actual (clientes o empresas)"""
+        current_stats = {}
+        
+        for client_id, credit_data in self.clients_credit_scores.items():
+            # Determinar si es cliente o empresa
+            client_state = self.client_states.get(client_id, {})
+            is_company = client_state.get('company', False)
+            
+            # Filtrar según vista actual
+            if self.current_credit_view == "clientes" and is_company:
+                continue
+            elif self.current_credit_view == "empresas" and not is_company:
+                continue
+            
+            # Contar por nivel
+            level_name = credit_data['credit_level']['name']
+            current_stats[level_name] = current_stats.get(level_name, 0) + 1
+        
+        return current_stats
+
+    def create_client_credit_content(self):
+        """Crear contenido de créditos para clientes"""
+        self.create_filtered_credit_levels_grid("clientes")
+
+    def create_company_credit_content(self):
+        """Crear contenido de créditos para empresas"""
+        self.create_filtered_credit_levels_grid("empresas")
+    
+    def create_company_credit_content(self):
+        """Crear contenido de créditos para empresas"""
+        self.create_filtered_credit_levels_grid("empresas")
+
+    def create_filtered_credit_levels_grid(self, filter_type):
+        """Crear grid de niveles de crédito filtrado por tipo"""
+        colors = self.get_current_colors()
+        
+        # Contenedor principal
+        grid_widget = QWidget()
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(15)
+        
+        # Definir los niveles de crédito
+        levels = [
+            {
+                'name': 'DORADO',
+                'icon': '🥇',
+                'color': '#FFD700',
+                'description': 'Crédito Alto',
+                'range': '1000+ pts',
+                'position': (0, 0)
+            },
+            {
+                'name': 'VERDE', 
+                'icon': '✅',
+                'color': '#22C55E',
+                'description': 'Crédito Normal',
+                'range': '600-999 pts',
+                'position': (0, 1)
+            },
+            {
+                'name': 'AMARILLO',
+                'icon': '⚠️', 
+                'color': '#EAB308',
+                'description': 'Crédito a Revisión',
+                'range': '400-599 pts',
+                'position': (0, 2)
+            },
+            {
+                'name': 'NARANJA',
+                'icon': '🔶',
+                'color': '#F97316', 
+                'description': 'Crédito de Riesgo',
+                'range': '200-399 pts',
+                'position': (1, 0)
+            },
+            {
+                'name': 'ROJO',
+                'icon': '🚫',
+                'color': '#EF4444',
+                'description': 'Sin Crédito - Buró',
+                'range': '0-199 pts',
+                'position': (1, 1)
+            }
+        ]
+        
+        # Crear tabla para cada nivel
+        for level in levels:
+            self.create_filtered_credit_level_table(
+                grid_layout, 
+                level['name'],
+                level['icon'], 
+                level['color'],
+                level['description'],
+                level['range'],
+                level['position'][0],
+                level['position'][1],
+                filter_type
+            )
+        
+        # Espacio vacío en la última posición
+        empty_widget = QWidget()
+        grid_layout.addWidget(empty_widget, 1, 2)
+        
+        grid_widget.setLayout(grid_layout)
+        self.main_layout.addWidget(grid_widget)
+
+    def create_filtered_credit_level_table(self, layout, level_name, icon, color, description, point_range, row, col, filter_type):
+        """Crear tabla para un nivel de crédito específico con filtro"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        # Filtrar clientes por nivel Y tipo (cliente/empresa)
+        clients_in_level = {}
+        
+        for client_id, data in self.clients_credit_scores.items():
+            if data['credit_level']['name'] != level_name:
+                continue
+            
+            # Aplicar filtro de tipo
+            client_state = self.client_states.get(client_id, {})
+            is_company = client_state.get('company', False)
+            
+            if filter_type == "clientes" and is_company:
+                continue
+            elif filter_type == "empresas" and not is_company:
+                continue
+            
+            clients_in_level[client_id] = data
+        
+        # Crear card
+        level_card = ModernCard(self.theme_manager)
+        level_card.setMinimumHeight(350)
+        level_card.setMaximumHeight(450)
+        
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(15, 15, 15, 15)
+        card_layout.setSpacing(10)
+        
+        # Header del nivel
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(5)
+        
+        # Título con ícono
+        title_layout = QHBoxLayout()
+        
+        icon_label = QLabel(icon)
+        icon_label.setFont(QFont("Segoe UI", 16))
+        
+        name_label = QLabel(level_name)
+        name_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        name_label.setStyleSheet(f"color: {color};")
+        
+        count_label = QLabel(f"({len(clients_in_level)})")
+        count_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        count_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        # Indicador de tipo
+        type_label = QLabel("👤" if filter_type == "clientes" else "🏢")
+        type_label.setFont(QFont("Segoe UI", 12))
+        type_label.setToolTip("Clientes" if filter_type == "clientes" else "Empresas")
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(name_label)
+        title_layout.addWidget(count_label)
+        title_layout.addWidget(type_label)
+        title_layout.addStretch()
+        
+        # Descripción y rango
+        desc_label = QLabel(f"{description} • {point_range}")
+        desc_label.setFont(QFont("Segoe UI", 9))
+        desc_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        header_layout.addLayout(title_layout)
+        header_layout.addWidget(desc_label)
+        
+        card_layout.addLayout(header_layout)
+        
+        # Tabla de clientes
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(['Cliente', 'Puntaje', 'Transacciones', 'Promedio Días'])
+        
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Configurar columnas
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        
+        table.setColumnWidth(1, 80)
+        table.setColumnWidth(2, 90)
+        table.setColumnWidth(3, 90)
+        
+        table.setMaximumHeight(250)
+        table.setMinimumHeight(180)
+        
+        # Estilo específico
+        table.setStyleSheet(f"""
+            QTableWidget {{
+                background: rgba({self.hex_to_rgb(color)}, 0.05);
+                border: 1px solid rgba({self.hex_to_rgb(color)}, 0.2);
+                font-size: 10px;
+            }}
+            QTableWidget::item {{
+                padding: 6px 4px;
+            }}
+            QTableWidget::item:selected {{
+                background: rgba({self.hex_to_rgb(color)}, 0.3);
+            }}
+            QTableWidget QHeaderView::section {{
+                border-bottom: 2px solid {color};
+                padding: 6px 4px;
+                font-size: 9px;
+            }}
+        """)
+        
+        # Poblar tabla
+        self.populate_credit_level_table(table, clients_in_level, color)
+        
+        card_layout.addWidget(table)
+        level_card.setLayout(card_layout)
+        
+        layout.addWidget(level_card, row, col)
+    
     def populate_category_table(self, table, category_title, color):
         """Poblar tabla con datos según la categoría - optimizado"""
         category_type = self.get_category_from_title(category_title)
@@ -960,21 +2561,614 @@ class CobranzaApp(QWidget):
         return "#ffffff"
 
     def switch_view(self, view):
-        """Cambiar entre vistas con transición"""
+        """Cambiar entre vistas con manejo de errores mejorado"""
         if self.current_view != view:
             self.current_view = view
             
             # Actualizar botones
             self.clientes_btn.setChecked(view == "clientes")
             self.empresas_btn.setChecked(view == "empresas")
+            self.creditos_btn.setChecked(view == "creditos")
+            self.top_btn.setChecked(view == "top")
             self.buro_btn.setChecked(view == "buro")
             
-            # Mostrar vista correspondiente
-            if view == "buro":
-                self.create_buro_view()
-            else:
+            try:
+                if view == "top":
+                    self.create_top_clientes_view_safe()  # Usar versión segura
+                elif view == "buro":
+                    self.create_buro_view()
+                elif view == "creditos":
+                    self.create_creditos_view()
+                else:
+                    self.create_clientes_view()
+                    
+            except Exception as e:
+                logging.error(f"Error cambiando a vista {view}: {e}")
+                # Volver a vista segura
+                self.current_view = "clientes"
+                self.clientes_btn.setChecked(True)
                 self.create_clientes_view()
+                QMessageBox.critical(self, "❌ Error", f"Error cambiando vista: {str(e)}")
 
+    def create_top_clientes_view_safe(self):
+        """Crear vista de top clientes con manejo de errores robusto"""
+        try:
+            self.create_top_clientes_view()
+        except Exception as e:
+            logging.error(f"Error en vista de top clientes: {e}")
+            
+            # Crear vista de error simple
+            self.clear_layout(self.main_layout)
+            colors = self.get_current_colors()
+            
+            error_container = ModernCard(self.theme_manager)
+            error_container.setFixedHeight(200)
+            error_layout = QVBoxLayout()
+            error_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            error_label = QLabel("❌ Error al cargar Top Clientes")
+            error_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Medium))
+            error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            error_label.setStyleSheet(f"color: {colors['DANGER_RED']}; margin: 30px;")
+            
+            detail_label = QLabel(f"Detalles: {str(e)}")
+            detail_label.setFont(QFont("Segoe UI", 10))
+            detail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            detail_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+            detail_label.setWordWrap(True)
+            
+            retry_button = QPushButton("🔄 Volver a Intentar")
+            retry_button.setFont(QFont("Segoe UI", 12))
+            retry_button.clicked.connect(lambda: self.switch_view("top"))
+            
+            back_button = QPushButton("← Volver a Clientes")
+            back_button.setFont(QFont("Segoe UI", 12))
+            back_button.clicked.connect(lambda: self.switch_view("clientes"))
+            
+            buttons_layout = QHBoxLayout()
+            buttons_layout.addWidget(retry_button)
+            buttons_layout.addWidget(back_button)
+            
+            error_layout.addWidget(error_label)
+            error_layout.addWidget(detail_label)
+            error_layout.addLayout(buttons_layout)
+            error_container.setLayout(error_layout)
+            self.main_layout.addWidget(error_container)
+
+
+    def create_top_clientes_view(self):
+        """Crear vista de top clientes con carga bajo demanda"""
+        # Verificar si necesitamos cargar datos
+        if not self.top_clients_data_loaded:
+            self.show_top_loading_indicator()
+            QApplication.processEvents()
+            
+            if not self.load_top_clients_data():
+                self.switch_view("clientes")
+                return
+        
+        self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
+        
+        # Verificar si los datos están disponibles
+        if not self.all_clients_spending:
+            error_container = ModernCard(self.theme_manager)
+            error_container.setFixedHeight(200)
+            error_layout = QVBoxLayout()
+            error_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            error_label = QLabel("❌ No se pudieron cargar los datos de gastos")
+            error_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Medium))
+            error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            error_label.setStyleSheet(f"color: {colors['DANGER_RED']}; margin: 30px;")
+            
+            retry_button = QPushButton("🔄 Reintentar")
+            retry_button.setFont(QFont("Segoe UI", 12))
+            retry_button.clicked.connect(self.retry_top_data_load)
+            
+            error_layout.addWidget(error_label)
+            error_layout.addWidget(retry_button)
+            error_container.setLayout(error_layout)
+            self.main_layout.addWidget(error_container)
+            return
+        
+        # Sub-navegación
+        self.create_top_sub_navigation()
+        
+        # Contenido
+        self.create_top_content()
+    
+    def show_top_loading_indicator(self):
+        """Mostrar indicador de carga para top clientes"""
+        self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
+        
+        loading_container = ModernCard(self.theme_manager)
+        loading_container.setFixedHeight(300)
+        loading_layout = QVBoxLayout()
+        loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_layout.setSpacing(20)
+        
+        icon_label = QLabel("🏆")
+        icon_label.setFont(QFont("Segoe UI", 48))
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        loading_label = QLabel("Cargando Top Clientes...")
+        loading_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']};")
+        
+        sub_label = QLabel("Calculando gastos totales de todos los clientes\nEsto puede tomar unos segundos...")
+        sub_label.setFont(QFont("Segoe UI", 12))
+        sub_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sub_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        loading_layout.addWidget(icon_label)
+        loading_layout.addWidget(loading_label)
+        loading_layout.addWidget(sub_label)
+        
+        loading_container.setLayout(loading_layout)
+        self.main_layout.addWidget(loading_container)
+
+    def load_top_clients_data(self):
+        """Cargar datos para top clientes"""
+        if self.top_clients_data_loaded or self.top_clients_data_loading:
+            return True
+        
+        try:
+            self.top_clients_data_loading = True
+            logging.info("Cargando datos de top clientes bajo demanda...")
+            
+            # Verificar si los datos básicos están cargados
+            if not self.data_loaded:
+                logging.warning("Datos básicos no cargados, cargando primero...")
+                self.load_data()
+            
+            # Reutilizar datos si ya están cargados del sistema de créditos
+            if not hasattr(self, 'all_clients_data') or not self.all_clients_data:
+                from database import get_all_clients_data  # Asegúrate de importar
+                self.all_clients_data = get_all_clients_data()
+                
+            if not hasattr(self, 'all_ventas_data') or not self.all_ventas_data:
+                from database import get_all_ventas_data  # Asegúrate de importar
+                self.all_ventas_data = get_all_ventas_data()
+            
+            # Calcular gastos totales por cliente
+            self.all_clients_spending = self.calculate_all_clients_spending()
+            
+            logging.info(f"Datos de top clientes cargados: {len(self.all_clients_spending)} clientes analizados")
+            
+            self.top_clients_data_loaded = True
+            self.top_clients_data_loading = False
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error al cargar datos de top clientes: {e}")
+            self.top_clients_data_loading = False
+            self.top_clients_data_loaded = False
+            
+            # Mostrar error en lugar de cerrar la app
+            QMessageBox.critical(self, "❌ Error", 
+                            f"Error al cargar datos de top clientes:\n{str(e)}")
+            return False
+
+    def calculate_all_clients_spending(self):
+        """Calcular el gasto total de todos los clientes"""
+        clients_spending = {}
+        
+        try:
+            for client_id, client_data in self.all_clients_data.items():
+                total_spent = 0.0
+                
+                # Buscar todas las ventas del cliente
+                for venta_id, venta_data in self.all_ventas_data.items():
+                    if venta_data.get('cveCte') == client_id:
+                        # Intentar extraer el monto del ticket
+                        ticket_data = venta_data.get('datos', '')
+                        
+                        if ticket_data:
+                            # Usar el mismo método que en CreditDetailWindow
+                            monto = self.extract_amount_from_ticket_data(ticket_data)
+                        else:
+                            # Fallback a campos tradicionales
+                            monto = venta_data.get('importe', 0) or venta_data.get('total', 0) or 0
+                            if isinstance(monto, str):
+                                try:
+                                    monto = float(monto.replace(',', '').replace('$', ''))
+                                except (ValueError, AttributeError):
+                                    monto = 0
+                        
+                        total_spent += monto
+                
+                if total_spent > 0:
+                    clients_spending[client_id] = {
+                        'client_data': client_data,
+                        'total_spent': total_spent
+                    }
+            
+            return clients_spending
+            
+        except Exception as e:
+            logging.error(f"Error calculando gastos de clientes: {e}")
+            return {}
+
+    def extract_amount_from_ticket_data(self, ticket_data):
+        """Extraer el monto de los datos del ticket (reutilizado de CreditDetailWindow)"""
+        if not ticket_data:
+            return 0.0
+        
+        try:
+            lines = ticket_data.split('\r\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                if "IMPORTE:" in line:
+                    try:
+                        importe_part = line.split("IMPORTE:")[-1].strip()
+                        importe_clean = importe_part.replace('$', '').replace(',', '').strip()
+                        return float(importe_clean)
+                    except (ValueError, IndexError):
+                        continue
+        except Exception:
+            pass
+        
+        return 0.0
+
+    def create_top_sub_navigation(self):
+        """Crear sub-navegación para top clientes"""
+        colors = self.get_current_colors()
+        
+        nav_frame = ModernCard(self.theme_manager)
+        nav_frame.setFixedHeight(60)
+        nav_frame.setContentsMargins(20, 10, 20, 10)
+        
+        nav_layout = QHBoxLayout()
+        nav_layout.setSpacing(15)
+        
+        # Botón Top Clientes
+        self.top_clientes_btn = ModernButton("🏆 TOP CLIENTES", self.theme_manager)
+        self.top_clientes_btn.setCheckable(True)
+        self.top_clientes_btn.setChecked(self.current_top_view == "clientes")
+        self.top_clientes_btn.setFixedHeight(35)
+        self.top_clientes_btn.setFixedWidth(180)
+        self.top_clientes_btn.clicked.connect(lambda: self.switch_top_view("clientes"))
+        
+        # Botón Top Empresas
+        self.top_empresas_btn = ModernButton("🏢 TOP EMPRESAS", self.theme_manager)
+        self.top_empresas_btn.setCheckable(True)
+        self.top_empresas_btn.setChecked(self.current_top_view == "empresas")
+        self.top_empresas_btn.setFixedHeight(35)
+        self.top_empresas_btn.setFixedWidth(180)
+        self.top_empresas_btn.clicked.connect(lambda: self.switch_top_view("empresas"))
+        
+        nav_layout.addWidget(self.top_clientes_btn)
+        nav_layout.addWidget(self.top_empresas_btn)
+        nav_layout.addStretch()
+        
+        # Estadísticas
+        stats_text = self.get_top_stats_text()
+        stats_label = QLabel(stats_text)
+        stats_label.setFont(QFont("Segoe UI", 10))
+        stats_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        nav_layout.addWidget(stats_label)
+        
+        nav_frame.setLayout(nav_layout)
+        self.main_layout.addWidget(nav_frame)
+
+    def switch_top_view(self, view):
+        """Cambiar vista de top clientes/empresas"""
+        if self.current_top_view != view:
+            self.current_top_view = view
+            
+            # Actualizar botones
+            self.top_clientes_btn.setChecked(view == "clientes")
+            self.top_empresas_btn.setChecked(view == "empresas")
+            
+            # Actualizar estadísticas
+            stats_widgets = self.findChildren(QLabel)
+            for widget in stats_widgets:
+                if "Total gastado" in widget.text():
+                    widget.setText(self.get_top_stats_text())
+                    break
+            
+            # Recrear contenido
+            self.recreate_only_top_content()
+
+    def get_top_stats_text(self):
+        """Obtener texto de estadísticas para vista actual"""
+        filtered_data = self.filter_top_clients_by_type(self.current_top_view)
+        
+        if filtered_data:
+            total_spending = sum(data['total_spent'] for data in filtered_data.values())
+            count = len(filtered_data)
+            type_name = "Clientes" if self.current_top_view == "clientes" else "Empresas"
+            return f"{count} {type_name} • Total gastado: ${total_spending:,.0f}"
+        else:
+            type_name = "Clientes" if self.current_top_view == "clientes" else "Empresas"
+            return f"0 {type_name} • Total gastado: $0"
+
+    def filter_top_clients_by_type(self, client_type):
+        """Filtrar clientes por tipo para top"""
+        filtered = {}
+        
+        for client_id, spending_data in self.all_clients_spending.items():
+            # Verificar tipo (cliente/empresa)
+            client_state = self.client_states.get(client_id, {})
+            is_company = client_state.get('company', False)
+            
+            if client_type == "clientes" and is_company:
+                continue
+            elif client_type == "empresas" and not is_company:
+                continue
+            
+            filtered[client_id] = spending_data
+        
+        return filtered
+
+    def create_top_content(self):
+        """Crear contenido de top clientes"""
+        # Filtrar datos por tipo actual
+        filtered_data = self.filter_top_clients_by_type(self.current_top_view)
+        
+        # Ordenar por gasto total (top 10)
+        sorted_clients = sorted(
+            filtered_data.items(),
+            key=lambda x: x[1]['total_spent'],
+            reverse=True
+        )[:10]  # Solo top 10
+        
+        # Crear tabla
+        self.create_top_table(sorted_clients)
+
+    def recreate_only_top_content(self):
+        """Recrear solo el contenido de top clientes"""
+        layout_count = self.main_layout.count()
+        
+        # Eliminar solo el último widget (el contenido)
+        if layout_count > 1:
+            last_item = self.main_layout.itemAt(layout_count - 1)
+            if last_item and last_item.widget():
+                last_item.widget().deleteLater()
+                self.main_layout.removeWidget(last_item.widget())
+        
+        # Crear nuevo contenido
+        self.create_top_content()
+
+    def create_top_table(self, sorted_clients):
+        """Crear tabla de top clientes"""
+        colors = self.get_current_colors()
+        theme = self.theme_manager.get_current_theme()
+        
+        # Card contenedor
+        table_card = ModernCard(self.theme_manager)
+        table_layout = QVBoxLayout()
+        table_layout.setContentsMargins(20, 20, 20, 20)
+        table_layout.setSpacing(15)
+        
+        # Header
+        header_layout = QHBoxLayout()
+        
+        # Título con ícono
+        title_section = QHBoxLayout()
+        title_section.setSpacing(10)
+        
+        icon_label = QLabel("🏆")
+        icon_label.setFont(QFont("Segoe UI", 24))
+        
+        type_name = "CLIENTES" if self.current_top_view == "clientes" else "EMPRESAS"
+        title_label = QLabel(f"TOP 10 {type_name} QUE MÁS HAN GASTADO")
+        title_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        title_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']};")
+        
+        title_section.addWidget(icon_label)
+        title_section.addWidget(title_label)
+        
+        header_layout.addLayout(title_section)
+        header_layout.addStretch()
+        
+        # Total general del top 10
+        if sorted_clients:
+            total_top = sum(client[1]['total_spent'] for client in sorted_clients)
+            total_label = QLabel(f"Total Top 10: ${total_top:,.0f}")
+            total_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+            total_label.setStyleSheet(f"color: {colors['SUCCESS_GREEN']};")
+            header_layout.addWidget(total_label)
+        
+        table_layout.addLayout(header_layout)
+        
+        # Tabla
+        table = QTableWidget()
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(['Posición', 'Cliente', 'Total Gastado', 'Última Compra', 'Promedio por Compra'])
+        
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Configurar columnas
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        
+        table.setColumnWidth(0, 80)
+        table.setColumnWidth(2, 130)
+        table.setColumnWidth(3, 120)
+        table.setColumnWidth(4, 150)
+        
+        # Estilo de tabla premium
+        table.setStyleSheet(f"""
+            QTableWidget {{
+                background: {theme['card_bg_alpha']};
+                border: 1px solid rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+                font-size: 12px;
+                border-radius: 8px;
+            }}
+            QTableWidget::item {{
+                padding: 10px 8px;
+            }}
+            QTableWidget::item:selected {{
+                background: rgba({self.hex_to_rgb(colors['BRIGHT_CYAN'])}, 0.3);
+            }}
+            QTableWidget QHeaderView::section {{
+                border-bottom: 2px solid {colors['BRIGHT_CYAN']};
+                padding: 10px 8px;
+                font-size: 11px;
+                font-weight: bold;
+            }}
+        """)
+        
+        # Poblar tabla
+        self.populate_top_table(table, sorted_clients)
+        
+        table_layout.addWidget(table)
+        table_card.setLayout(table_layout)
+        self.main_layout.addWidget(table_card)
+
+    def populate_top_table(self, table, sorted_clients):
+        """Poblar tabla de top clientes"""
+        from datetime import datetime
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QFont, QColor
+        from PyQt6.QtWidgets import QTableWidgetItem
+        
+        table.setRowCount(len(sorted_clients))
+        
+        # Colores para posiciones
+        position_colors = {
+            1: '#FFD700',  # Oro
+            2: '#C0C0C0',  # Plata
+            3: '#CD7F32',  # Bronce
+        }
+        
+        for row, (client_id, spending_data) in enumerate(sorted_clients):
+            try:
+                position = row + 1
+                client_data = spending_data['client_data']
+                total_spent = spending_data['total_spent']
+                
+                # Posición con medalla
+                position_text = f"#{position}"
+                if position <= 3:
+                    medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+                    position_text = f"{medals[position]} {position}"
+                
+                position_item = QTableWidgetItem(position_text)
+                position_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                position_item.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+                if position in position_colors:
+                    position_item.setForeground(QColor(position_colors[position]))
+                table.setItem(row, 0, position_item)
+                
+                # Nombre del cliente
+                nombre = client_data.get('nombre', 'Sin nombre')
+                name_item = QTableWidgetItem(nombre)
+                name_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                name_item.setData(Qt.ItemDataRole.UserRole, client_id)
+                name_item.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+                name_item.setToolTip(f"ID: {client_id}\nNombre completo: {nombre}")
+                table.setItem(row, 1, name_item)
+                
+                # Total gastado
+                spent_item = QTableWidgetItem(f"${total_spent:,.0f}")
+                spent_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                spent_item.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+                spent_item.setForeground(QColor('#22C55E'))
+                table.setItem(row, 2, spent_item)
+                
+                # Última compra (buscar la fecha más reciente)
+                last_purchase = self.get_last_purchase_date(client_id)
+                if last_purchase:
+                    last_purchase_str = last_purchase.strftime("%d/%m/%Y")
+                else:
+                    last_purchase_str = "N/A"
+                
+                last_item = QTableWidgetItem(last_purchase_str)
+                last_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                last_item.setFont(QFont("Segoe UI", 9))
+                table.setItem(row, 3, last_item)
+                
+                # Promedio por compra
+                purchase_count = self.count_client_purchases(client_id)
+                if purchase_count > 0:
+                    avg_per_purchase = total_spent / purchase_count
+                    avg_text = f"${avg_per_purchase:,.0f}"
+                    tooltip = f"{purchase_count} compras total"
+                else:
+                    avg_text = "N/A"
+                    tooltip = "Sin compras registradas"
+                
+                avg_item = QTableWidgetItem(avg_text)
+                avg_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                avg_item.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+                avg_item.setForeground(QColor('#6366F1'))
+                avg_item.setToolTip(tooltip)
+                table.setItem(row, 4, avg_item)
+                
+            except Exception as e:
+                logging.error(f"Error poblando fila {row}: {e}")
+                continue
+        
+        # Conectar doble clic
+        table.cellDoubleClicked.connect(lambda row, col: self.on_top_client_double_click(table, row))
+
+    def get_last_purchase_date(self, client_id):
+        """Obtener la fecha de la última compra del cliente"""
+        last_date = None
+        
+        for venta_id, venta_data in self.all_ventas_data.items():
+            if venta_data.get('cveCte') == client_id:
+                fecha_str = venta_data.get('fecha')
+                if fecha_str:
+                    try:
+                        fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                        if last_date is None or fecha > last_date:
+                            last_date = fecha
+                    except:
+                        continue
+        
+        return last_date
+
+    def count_client_purchases(self, client_id):
+        """Contar el número de compras del cliente"""
+        count = 0
+        for venta_id, venta_data in self.all_ventas_data.items():
+            if venta_data.get('cveCte') == client_id:
+                count += 1
+        return count
+
+    def on_top_client_double_click(self, table, row):
+        """Maneja el doble clic en un cliente del top"""
+        try:
+            name_item = table.item(row, 1)
+            if name_item:
+                client_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if client_id:
+                    # Usar los datos apropiados según disponibilidad
+                    if client_id in self.clientes_data:
+                        client_data = self.clientes_data[client_id]
+                    elif client_id in self.all_clients_data:
+                        client_data = self.all_clients_data[client_id]
+                    else:
+                        QMessageBox.warning(self, "⚠️ Error", "No se pudo obtener la información del cliente")
+                        return
+                    
+                    self.detail_window = ClienteDetalleWindow(self, client_data, client_id)
+                    self.detail_window.show()
+        except Exception as e:
+            logging.error(f"Error al abrir detalles del top cliente: {e}")
+            QMessageBox.critical(self, "❌ Error", f"Error al abrir detalles del cliente: {str(e)}")
+
+    def retry_top_data_load(self):
+        """Reintentar carga de datos de top clientes"""
+        self.top_clients_data_loaded = False
+        self.top_clients_data_loading = False
+        self.create_top_clientes_view()
+    
+    
+    
     def should_show_client(self, client_id):
         """Determinar si un cliente debe mostrarse en la vista actual"""
         client_state = self.client_states.get(client_id, {})
@@ -1118,9 +3312,9 @@ class CobranzaApp(QWidget):
         return "verde"
 
     def load_data(self):
-        """Cargar datos desde la base de datos"""
+        """Cargar SOLO datos principales desde la base de datos"""
         try:
-            logging.info("Cargando datos desde la base de datos...")
+            logging.info("Cargando datos principales desde la base de datos...")
             colors = self.get_current_colors()
             
             # Mostrar estado de carga
@@ -1129,16 +3323,14 @@ class CobranzaApp(QWidget):
             self.empresas_label.setText("--")
             self.buro_label.setText("--")
             
-            # Cargar datos principales
+            # Cargar SOLO datos principales (más rápido)
             self.clientes_data = get_clients_data()
             self.ventas_data = get_ventas_data()
             self.client_states = get_client_states()
             self.clients_buro = get_clients_without_credit()
             
-            logging.info(f"Datos cargados: {len(self.clientes_data)} clientes, "
-                        f"{len(self.ventas_data)} ventas, "
-                        f"{len(self.client_states)} estados, "
-                        f"{len(self.clients_buro)} clientes en buró")
+            logging.info(f"Datos principales cargados: {len(self.clientes_data)} clientes con deuda, "
+                        f"{len(self.ventas_data)} ventas pendientes")
             
             self.data_loaded = True
             self.update_debt_info()
@@ -1146,7 +3338,7 @@ class CobranzaApp(QWidget):
             self.refresh_current_view()
                             
         except Exception as e:
-            logging.error(f"Error al cargar datos: {e}")
+            logging.error(f"Error al cargar datos principales: {e}")
             self.clientes_data = {}
             self.ventas_data = {}
             self.client_states = {}
@@ -1158,16 +3350,60 @@ class CobranzaApp(QWidget):
             self.empresas_label.setText("Error")
             self.buro_label.setText("Error")
 
+    def load_credit_data(self):
+        """Cargar datos del sistema de créditos SOLO cuando se necesite"""
+        if self.credit_data_loaded or self.credit_data_loading:
+            return True  # Ya están cargados o se están cargando
+        
+        try:
+            self.credit_data_loading = True
+            logging.info("Cargando datos del sistema de créditos bajo demanda...")
+            
+            # Mostrar indicador de carga específico para créditos
+            self.show_credit_loading_indicator()
+            
+            # Procesar eventos para mostrar el indicador
+            QApplication.processEvents()
+            
+            # CARGAR DATOS PARA SISTEMA DE CRÉDITOS
+            self.all_clients_data = get_all_clients_data()
+            self.all_ventas_data = get_all_ventas_data()
+            self.clients_credit_scores = get_all_clients_credit_scores()
+            self.credit_statistics = get_credit_statistics()
+            
+            logging.info(f"Datos de créditos cargados: {len(self.all_clients_data)} clientes totales, "
+                        f"{len(self.all_ventas_data)} ventas totales, "
+                        f"{len(self.clients_credit_scores)} puntajes crediticios calculados")
+            
+            self.credit_data_loaded = True
+            self.credit_data_loading = False
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error al cargar datos de créditos: {e}")
+            self.credit_data_loading = False
+            QMessageBox.critical(self, "❌ Error", 
+                            f"Error al cargar datos del sistema de créditos:\n{str(e)}")
+            return False
+    
     def reload_data(self):
-        """Recargar todos los datos"""
+        """Recargar datos - con opción para créditos y top clientes"""
         try:
             logging.info("Recargando datos...")
+            
+            # Siempre recargar datos principales
             self.load_data()
             
-            if self.current_view == "buro":
-                self.create_buro_view()
+            # Si estamos en vista de créditos, recargar también esos datos
+            if self.current_view == "creditos" and self.credit_data_loaded:
+                self.credit_data_loaded = False
+                self.create_creditos_view()
+            # Si estamos en vista de top clientes, recargar también esos datos
+            elif self.current_view == "top" and self.top_clients_data_loaded:
+                self.top_clients_data_loaded = False
+                self.create_top_clientes_view()
             else:
-                self.create_clientes_view()
+                self.refresh_current_view()
             
             QMessageBox.information(self, "✅ Éxito", "Datos recargados correctamente")
             
@@ -1175,13 +3411,73 @@ class CobranzaApp(QWidget):
             logging.error(f"Error al recargar datos: {e}")
             QMessageBox.critical(self, "❌ Error", f"Error al recargar datos: {str(e)}")
 
+    def clear_credit_data_if_not_needed(self):
+        """Liberar memoria de datos de créditos si no se está usando esa vista"""
+        if self.current_view != "creditos" and self.credit_data_loaded:
+            logging.info("Liberando memoria de datos crediticios (no se están usando)")
+            self.all_clients_data = {}
+            self.all_ventas_data = {}
+            self.clients_credit_scores = {}
+            self.credit_statistics = {}
+            self.credit_data_loaded = False
+    
     def refresh_current_view(self):
         """Actualizar la vista actual después de cargar datos"""
         if self.current_view == "buro":
             self.create_buro_view()
+        elif self.current_view == "creditos":
+            self.create_creditos_view()
+        elif self.current_view == "top":  # AGREGAR ESTA LÍNEA
+            self.create_top_clientes_view()
         else:
             self.create_clientes_view()
 
+    def show_credit_loading_indicator(self):
+        """Mostrar indicador de carga específico para créditos"""
+        self.clear_layout(self.main_layout)
+        colors = self.get_current_colors()
+        
+        loading_container = ModernCard(self.theme_manager)
+        loading_container.setFixedHeight(300)
+        loading_layout = QVBoxLayout()
+        loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_layout.setSpacing(20)
+        
+        # Ícono de carga más llamativo
+        icon_label = QLabel("💳")
+        icon_label.setFont(QFont("Segoe UI", 48))
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Mensaje principal
+        loading_label = QLabel("Cargando Sistema de Créditos...")
+        loading_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_label.setStyleSheet(f"color: {colors['BRIGHT_CYAN']};")
+        
+        # Mensaje secundario
+        sub_label = QLabel("Analizando historial crediticio de todos los clientes\nEsto puede tomar unos segundos...")
+        sub_label.setFont(QFont("Segoe UI", 12))
+        sub_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sub_label.setStyleSheet(f"color: {colors['TEXT_SECONDARY']};")
+        
+        # Barra de progreso visual (solo decorativa)
+        progress_container = QWidget()
+        progress_container.setFixedHeight(4)
+        progress_container.setStyleSheet(f"""
+            QWidget {{
+                background: {colors['CARD_BG']};
+                border-radius: 2px;
+            }}
+        """)
+        
+        loading_layout.addWidget(icon_label)
+        loading_layout.addWidget(loading_label)
+        loading_layout.addWidget(sub_label)
+        loading_layout.addWidget(progress_container)
+        
+        loading_container.setLayout(loading_layout)
+        self.main_layout.addWidget(loading_container)
+   
     def update_debt_info(self):
         """Actualizar la información de deuda en el header - formato compacto"""
         try:
@@ -1273,6 +3569,7 @@ class CobranzaApp(QWidget):
             subprocess.Popen([sys.executable, "updater_pyqt_ssh.py"])
             self.close()
             QApplication.quit()
+
 
 def main():
     try:
